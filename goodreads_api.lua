@@ -1,5 +1,6 @@
 -- goodreads_api.lua
 -- API facade for Goodreads. Routes calls to the legacy Rails backend.
+-- A second backend can be plugged in later without changing callers.
 
 local _ = require("lib/goodreads_i18n").gettext
 
@@ -128,6 +129,7 @@ function GoodreadsApi:_get_backend()
   local backend = GoodreadsApiLegacy
   backend.settings = self.settings
   backend.on_error = self.on_error
+  backend.quiet = self.quiet
   return backend
 end
 

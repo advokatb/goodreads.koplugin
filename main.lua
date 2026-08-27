@@ -54,6 +54,8 @@ function GoodreadsPlugin:init()
     ensure_remote_pending = false,
     last_error_at = 0,
     last_error = nil,
+    network_retry_scheduled = false,
+    network_retry_done = false,
   }
 
   local settings_path = ("%s/%s"):format(
@@ -97,12 +99,32 @@ or in goodreads_config.lua (DevTools → Application → Cookies → goodreads.c
 You do not need to restart KOReader — changes apply immediately.]]),
       icon = "notice-warning",
     })
-  elseif err and err ~= "" then
+    return
+  end
+
+  -- Transient: Wi-Fi radio up but no IP yet (Kobo resume). Don't block the screen.
+  if err == _("No network connection") then
+    UIManager:show(Notification:new {
+      text = T(_("Goodreads: %1"), tostring(err)),
+      timeout = 3,
+    })
+    return
+  end
+
+  if err and err ~= "" then
     UIManager:show(InfoMessage:new {
       text = T(_("Goodreads: %1"), tostring(err)),
       icon = "notice-warning",
     })
   end
+end
+
+function GoodreadsPlugin:_quietly(fn)
+  local prev = Api.quiet
+  Api.quiet = true
+  local ok, err = pcall(fn)
+  Api.quiet = prev
+  if not ok then error(err) end
 end
 
 function GoodreadsPlugin:onDispatcherRegisterActions()
@@ -248,7 +270,15 @@ function GoodreadsPlugin:_quickSetStatus(status_code, opts)
     local edition_id = self.settings:readBookSetting(file, "edition_id")
     local rating     = self:_resolveRating(file, status_code)
 
-    local result = Api:set_status(edition_id, status_code, nil, rating)
+    local result
+    local function do_set()
+      result = Api:set_status(edition_id, status_code, nil, rating)
+    end
+    if opts.silent then
+      self:_quietly(do_set)
+    else
+      do_set()
+    end
     if result and result.ok then
       local update = { status = status_code, shelf = Api:shelfForStatus(status_code) }
       if status_code == 1 then
@@ -310,8 +340,25 @@ Set stars and try again.]]),
 end
 
 function GoodreadsPlugin:_withWifi(callback, silent)
-  if NetworkMgr:isWifiOn() or NetworkMgr:isConnected() then
+  if NetworkMgr:isConnected() then
     callback()
+    return
+  end
+
+  local function when_connected()
+    callback()
+  end
+
+  -- Radio already up (typical Kobo resume) or we can restore it — wait for IP,
+  -- do not fire the request while DHCP is still running.
+  if NetworkMgr:isWifiOn() then
+    if NetworkMgr.scheduleConnectivityCheck then
+      NetworkMgr:scheduleConnectivityCheck(when_connected)
+    else
+      UIManager:scheduleIn(4, function()
+        if NetworkMgr:isConnected() then when_connected() end
+      end)
+    end
     return
   end
 
@@ -323,7 +370,7 @@ function GoodreadsPlugin:_withWifi(callback, silent)
     NetworkMgr:scheduleConnectivityCheck(function()
       NetworkMgr.wifi_was_on = original_on
       G_reader_settings:saveSetting("wifi_was_on", original_on)
-      callback()
+      when_connected()
     end)
     return
   end
@@ -333,7 +380,7 @@ function GoodreadsPlugin:_withWifi(callback, silent)
   end
 
   NetworkMgr:promptWifiOn(function()
-    callback()
+    when_connected()
   end)
 end
 
@@ -520,6 +567,26 @@ function GoodreadsPlugin:onDocSettingsItemsChanged(file, doc_settings)
   self:_quickSetStatus(status_code, { silent = false, force = true, filename = file })
 end
 
+function GoodreadsPlugin:_scheduleNetworkRetry()
+  if self.state.network_retry_scheduled or self.state.network_retry_done then
+    return
+  end
+  self.state.network_retry_scheduled = true
+  UIManager:scheduleIn(5, function()
+    self.state.network_retry_scheduled = false
+    self.state.network_retry_done = true
+    if not self.ui.document then return end
+    if not NetworkMgr:isConnected() then return end
+    if self.state.autolink_pending then
+      self:_tryAutolinkByGoodreadsId()
+    elseif self.state.ensure_remote_pending then
+      self:_runPendingEnsure()
+    elseif self.settings:bookLinked() then
+      self:_refreshRemoteState()
+    end
+  end)
+end
+
 function GoodreadsPlugin:_runPendingEnsure()
   if not self.state.ensure_remote_pending then return end
   if not self.ui.document then return end
@@ -527,12 +594,15 @@ function GoodreadsPlugin:_runPendingEnsure()
     self.state.ensure_remote_pending = false
     return
   end
-  if not (NetworkMgr:isWifiOn() or NetworkMgr:isConnected()) then
+  if not NetworkMgr:isConnected() then
     logger.info("Goodreads: auto-track wait — no network yet")
+    self:_scheduleNetworkRetry()
     return
   end
   self.state.ensure_remote_pending = false
-  self:_maybeAutoTrackProgress({ ensure = true })
+  self:_quietly(function()
+    self:_maybeAutoTrackProgress({ ensure = true })
+  end)
 end
 
 function GoodreadsPlugin:_tryAutolinkByGoodreadsId()
@@ -549,8 +619,9 @@ function GoodreadsPlugin:_tryAutolinkByGoodreadsId()
     return
   end
 
-  if not (NetworkMgr:isWifiOn() or NetworkMgr:isConnected()) then
+  if not NetworkMgr:isConnected() then
     logger.info("Goodreads: autolink wait — no network yet")
+    self:_scheduleNetworkRetry()
     return
   end
 
@@ -574,12 +645,19 @@ end
 function GoodreadsPlugin:_refreshRemoteState()
   if not self.ui.document then return end
   if not self.settings:bookLinked() then return end
-  if not (NetworkMgr:isWifiOn() or NetworkMgr:isConnected()) then
+  if not NetworkMgr:isConnected() then
+    self:_scheduleNetworkRetry()
     return
   end
   local edition_id = self.settings:getLinkedEditionId()
-  local state = Api:get_review_state(edition_id)
-  if not state or not state.ok then return end
+  local state
+  self:_quietly(function()
+    state = Api:get_review_state(edition_id)
+  end)
+  if not state or not state.ok then
+    self:_scheduleNetworkRetry()
+    return
+  end
   local file = self.ui.document.file
   local update = {
     status    = state.status ~= nil and state.status or GoodreadsSettings.UNSET,
@@ -634,12 +712,15 @@ function GoodreadsPlugin:onReaderReady()
 end
 
 function GoodreadsPlugin:onNetworkConnected()
-  self:_tryAutolinkByGoodreadsId()
-  if self.state.ensure_remote_pending then
-    self:_runPendingEnsure()
-  else
-    self:_refreshRemoteState()
-  end
+  self.state.network_retry_done = false
+  self:_quietly(function()
+    self:_tryAutolinkByGoodreadsId()
+    if self.state.ensure_remote_pending then
+      self:_runPendingEnsure()
+    else
+      self:_refreshRemoteState()
+    end
+  end)
 end
 
 function GoodreadsPlugin:onDocumentClose()
@@ -648,6 +729,8 @@ function GoodreadsPlugin:onDocumentClose()
   self.state.page = nil
   self.state.autolink_pending = false
   self.state.ensure_remote_pending = false
+  self.state.network_retry_scheduled = false
+  self.state.network_retry_done = false
 end
 
 function GoodreadsPlugin:addToMainMenu(menu_items)

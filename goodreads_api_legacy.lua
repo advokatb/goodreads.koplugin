@@ -171,6 +171,7 @@ end
 
 local function report_error(self, err)
   logger.warn("Goodreads API error:", err)
+  if self.quiet then return end
   if self.on_error then self.on_error(err) end
 end
 

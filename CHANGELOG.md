@@ -1,10 +1,17 @@
 # Changelog
 
+## [0.2.0] - 2026-08-27
+
+### Fixed
+- After Kobo resume, do not show a blocking “no network” dialog while Wi-Fi
+  is up but DHCP has not finished. Background sync waits for a real
+  connection and retries once; a leftover network error is a 3s toast.
+
 ## [0.1.0] - 2026-08-27
 
 First public release: link a Goodreads edition to the open KOReader book,
 sync exclusive-shelf status, rating, date finished, and reading percent.
-Session cookies only (no official API).
+Session cookies only (no official API). English / Russian / Ukrainian UI.
 
 ### Added
 - Search via `GET /book/auto_complete` (JSON) and link to sidecar key `goodreads`.
@@ -25,7 +32,7 @@ Session cookies only (no official API).
   detection. `jwt_token` is stripped (stale JWT breaks requests).
 - Settings: cookies, autolink, sync rating/progress, Wi-Fi on demand, confirm
   dialogs. Dispatcher actions for link / status / rating / auto-tracking.
-- i18n (`locale/ru.po`, `locale/uk.po`).
+- i18n (`locale/ru.po`, `locale/uk.po`) and GitHub Release workflow.
 
 ### Fixed
 - `POST /review/rate` HTTP **204 No Content** treated as success.
