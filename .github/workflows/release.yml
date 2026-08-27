@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install gettext
+        run: sudo apt-get update && sudo apt-get install -y gettext
+
+      - name: Validate locale PO files
+        run: |
+          if [ -f scripts/po2mo.sh ]; then
+            chmod +x scripts/po2mo.sh
+            bash scripts/po2mo.sh
+          else
+            echo "scripts/po2mo.sh not found at repo root" && exit 1
+          fi
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Create release archive
+        run: |
+          set -e
+          VERSION=${{ steps.version.outputs.version }}
+          PLUGIN_DIR=goodreads.koplugin
+          ARCHIVE_NAME=${PLUGIN_DIR}-v${VERSION}.zip
+          PKG_ROOT=goodreads_pkg
+          rm -rf "$PKG_ROOT"
+          mkdir -p "$PKG_ROOT/$PLUGIN_DIR"
+          rsync -a ./ "$PKG_ROOT/$PLUGIN_DIR/" \
+            --exclude="*.old" \
+            --exclude="*.log" \
+            --exclude="crash.log" \
+            --exclude="goodreads_config.lua" \
+            --exclude="cookies.txt" \
+            --exclude=".git*" --exclude=".github" \
+            --exclude="docs" \
+            --exclude="TODO.md" \
+            --exclude="scripts" \
+            --exclude="$PKG_ROOT" \
+            --exclude="staging"
+          (cd "$PKG_ROOT" && zip -r "../${ARCHIVE_NAME}" "$PLUGIN_DIR")
+          echo "archive_name=${ARCHIVE_NAME}" >> $GITHUB_ENV
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          echo "Extracting changelog for version: $VERSION"
+
+          START_LINE=$(grep -n "^## \[$VERSION\]" CHANGELOG.md | head -1 | cut -d: -f1)
+
+          if [ -z "$START_LINE" ]; then
+            echo "⚠ No changelog entry found for version $VERSION"
+            echo "## Version $VERSION" > release_notes.txt
+            echo "" >> release_notes.txt
+            echo "See [CHANGELOG.md](CHANGELOG.md) for details." >> release_notes.txt
+          else
+            echo "Found changelog entry at line $START_LINE"
+
+            NEXT_LINE=$(awk -v start="$START_LINE" 'NR > start && /^## \[/ {print NR; exit}' CHANGELOG.md)
+
+            if [ -z "$NEXT_LINE" ]; then
+              sed -n "${START_LINE},\$p" CHANGELOG.md > release_notes.txt
+            else
+              END_LINE=$((NEXT_LINE - 1))
+              sed -n "${START_LINE},${END_LINE}p" CHANGELOG.md > release_notes.txt
+            fi
+
+            sed -i '1d' release_notes.txt
+            perl -i -pe 'chomp if eof' release_notes.txt
+            perl -i -0pe 's/\n+$//' release_notes.txt
+          fi
+
+          if [ ! -s release_notes.txt ]; then
+            echo "⚠ Extracted changelog is empty, creating default"
+            echo "## Version $VERSION" > release_notes.txt
+            echo "" >> release_notes.txt
+            echo "See [CHANGELOG.md](CHANGELOG.md) for details." >> release_notes.txt
+          fi
+
+          echo "--- Release Notes ---"
+          cat release_notes.txt
+          echo "--- End Release Notes ---"
+          echo "File size: $(wc -c < release_notes.txt) bytes"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{ env.archive_name }}
+          body_path: release_notes.txt
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

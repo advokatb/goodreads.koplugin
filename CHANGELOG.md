@@ -1,0 +1,37 @@
+# Changelog
+
+## [0.1.0] - 2026-08-27
+
+First public release: link a Goodreads edition to the open KOReader book,
+sync exclusive-shelf status, rating, date finished, and reading percent.
+Session cookies only (no official API).
+
+### Added
+- Search via `GET /book/auto_complete` (JSON) and link to sidecar key `goodreads`.
+- Autolink by embedded `GOODREADS` / `goodreads:` identifier (on by default).
+- Autolink by ISBN when no GOODREADS id is present (on by default; not by title).
+- Status: Want to read / Currently reading / Finished / Status removed.
+  Extra exclusive shelves from ShelfChooser (e.g. Did not finish, Paused).
+  Non-exclusive tag shelves are not listed.
+- Rating 1–5★ from KOReader Book Status (`POST /review/rate/{book_id}`).
+- Date finished (today) on Finished via reading sessions; skip if a session
+  already exists.
+- Reading percent via `POST /user_status.json` (`user_status[percent]`; never
+  page and percent together). Auto-tracking posts at most once a minute while
+  Currently reading. Toggle: Settings → Sync reading progress.
+- Auto-tracking: ≥1% → Currently reading; ~100% / Book Status / EndOfBook →
+  Finished (+ rating + date). Abandoned → DNF if that exclusive shelf exists.
+- CSRF from `GET /`, cookie rotation from `Set-Cookie`, session-expired
+  detection. `jwt_token` is stripped (stale JWT breaks requests).
+- Settings: cookies, autolink, sync rating/progress, Wi-Fi on demand, confirm
+  dialogs. Dispatcher actions for link / status / rating / auto-tracking.
+- i18n (`locale/ru.po`, `locale/uk.po`).
+
+### Fixed
+- `POST /review/rate` HTTP **204 No Content** treated as success.
+- Status removed uses `POST /review/destroy/{book_id}` (exclusive `a=remove`
+  is 404). Sidecar `shelf` is actually cleared after remove (no double radio).
+- GET without `Origin` (avoids self-redirect hangs). Comma-folded `Set-Cookie`
+  merged on redirect hops.
+- `add_to_shelf` success parsing when `read_status` is JS-string-escaped.
+- HTTP 429/5xx retried twice; parse errors surface instead of failing silently.

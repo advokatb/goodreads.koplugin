@@ -1,0 +1,340 @@
+# Ukrainian translation of goodreads.koplugin
+# Copyright (C) 2026
+# This file is distributed under the same license as the goodreads package.
+# advokatb <igor.butsky@gmail.com>, 2026.
+msgid ""
+msgstr ""
+"Project-Id-Version: goodreads.koplugin\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-26 12:00+0000\n"
+"PO-Revision-Date: 2026-08-26 14:00+0300\n"
+"Last-Translator: advokatb <igor.butsky@gmail.com>\n"
+"Language-Team: advokatb <igor.butsky@gmail.com>\n"
+"Language: uk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: _meta.lua
+msgid "Goodreads"
+msgstr "Goodreads"
+
+#: _meta.lua
+msgid "Sync reading status, progress, and ratings with goodreads.com"
+msgstr "Синхронізація статусу читання, прогресу та оцінок з goodreads.com"
+
+#: main.lua
+msgid ""
+"Goodreads: session expired.\n"
+"\n"
+"Update cookies in Goodreads → Settings → Session cookies,\n"
+"or in goodreads_config.lua (DevTools → Application → Cookies → goodreads.com).\n"
+"\n"
+"You do not need to restart KOReader — changes apply immediately."
+msgstr ""
+"Goodreads: сесію завершено.\n"
+"\n"
+"Оновіть cookies у Goodreads → Налаштування → Cookies сесії,\n"
+"або в goodreads_config.lua (DevTools → Application → Cookies → goodreads.com).\n"
+"\n"
+"Перезапускати KOReader не потрібно — зміни застосовуються одразу."
+
+#: main.lua
+msgid "Goodreads: %1"
+msgstr "Goodreads: %1"
+
+#: main.lua
+msgid "Goodreads: Link book"
+msgstr "Goodreads: Зв'язати книгу"
+
+#: main.lua
+msgid "Goodreads: Status — Currently reading"
+msgstr "Goodreads: Статус — Читаю зараз"
+
+#: main.lua
+msgid "Goodreads: Status — Finished"
+msgstr "Goodreads: Статус — Прочитано"
+
+#: main.lua
+msgid "Goodreads: Enable auto-tracking"
+msgstr "Goodreads: Увімкнути автовідстеження"
+
+#: main.lua
+msgid "Goodreads: Disable auto-tracking"
+msgstr "Goodreads: Вимкнути автовідстеження"
+
+#: main.lua
+msgid "Goodreads: Send rating"
+msgstr "Goodreads: Надіслати оцінку"
+
+#: main.lua
+msgid "Goodreads: open a book to link it"
+msgstr "Goodreads: відкрийте книгу, щоб зв'язати її"
+
+#: main.lua
+msgid "Goodreads: link a book first"
+msgstr "Goodreads: спочатку зв'яжіть книгу"
+
+#: main.lua
+msgid "Goodreads: auto-tracking enabled"
+msgstr "Goodreads: автовідстеження увімкнено"
+
+#: main.lua
+msgid "Goodreads: auto-tracking disabled"
+msgstr "Goodreads: автовідстеження вимкнено"
+
+#: main.lua
+msgid "Goodreads: link a book and open it"
+msgstr "Goodreads: зв'яжіть книгу і відкрийте її"
+
+#: main.lua
+msgid "Goodreads: link a book first via Goodreads → Link book"
+msgstr "Goodreads: спочатку зв'яжіть книгу через меню Goodreads → Зв'язати книгу"
+
+#: main.lua
+msgid ""
+"Goodreads: no rating in KOReader Book Status (★).\n"
+"Set stars and try again."
+msgstr ""
+"Goodreads: у Book Status KOReader немає оцінки (★).\n"
+"Встановіть зірки та спробуйте знову."
+
+#: main.lua
+msgid "Goodreads: rating %1★ sent"
+msgstr "Goodreads: оцінку %1★ надіслано"
+
+#: goodreads_api.lua
+msgid "Want to read"
+msgstr "Хочу прочитати"
+
+#: goodreads_api.lua
+msgid "Finished"
+msgstr "Прочитано"
+
+#: goodreads_api.lua
+msgid "Currently reading"
+msgstr "Читаю зараз"
+
+#: goodreads_api.lua
+msgid "Did not finish"
+msgstr "Не дочитано"
+
+#: goodreads_api.lua
+msgid "Paused"
+msgstr "На паузі"
+
+#: goodreads_api.lua
+msgid "Status removed"
+msgstr "Статус видалено"
+
+#: goodreads_api.lua
+msgid "Unknown status"
+msgstr "Невідомий статус"
+
+#: goodreads_api_legacy.lua
+msgid "No network connection"
+msgstr "Немає з'єднання з мережею"
+
+#: goodreads_api_legacy.lua
+msgid "Could not parse the Goodreads response. The site may have changed."
+msgstr "Не вдалося розібрати відповідь Goodreads. Сайт міг змінитися."
+
+#: goodreads_api_legacy.lua
+msgid "Network error: %1"
+msgstr "Помилка мережі: %1"
+
+#: goodreads_api_legacy.lua
+msgid "Error updating rating"
+msgstr "Помилка оновлення оцінки"
+
+#: goodreads_menu.lua
+msgid "Yes"
+msgstr "Так"
+
+#: goodreads_menu.lua
+msgid "Linking by Goodreads id…"
+msgstr "Зв'язування за Goodreads id…"
+
+#: goodreads_menu.lua
+msgid "Linking by ISBN…"
+msgstr "Зв'язування за ISBN…"
+
+#: goodreads_menu.lua
+msgid "Book linked: %1"
+msgstr "Книгу зв'язано: %1"
+
+#: goodreads_menu.lua
+msgid "Search book on Goodreads"
+msgstr "Пошук книги на Goodreads"
+
+#: goodreads_menu.lua
+msgid "Search"
+msgstr "Пошук"
+
+#: goodreads_menu.lua
+msgid "Cancel"
+msgstr "Скасувати"
+
+#: goodreads_menu.lua
+msgid "Searching on Goodreads…"
+msgstr "Пошук на Goodreads…"
+
+#: goodreads_menu.lua
+msgid ""
+"Nothing found for \"%1\".\n"
+"Try another query?"
+msgstr ""
+"Нічого не знайдено за запитом «%1».\n"
+"Спробувати інший запит?"
+
+#: goodreads_menu.lua
+msgid "New query"
+msgstr "Новий запит"
+
+#: goodreads_menu.lua
+msgid "↩ New search"
+msgstr "↩ Новий пошук"
+
+#: goodreads_menu.lua
+msgid "Search results"
+msgstr "Результати пошуку"
+
+#: goodreads_menu.lua
+msgid "Book is not linked to Goodreads"
+msgstr "Книга не зв'язана з Goodreads"
+
+#: goodreads_menu.lua
+msgid "Updating status on Goodreads…"
+msgstr "Оновлення статусу на Goodreads…"
+
+#: goodreads_menu.lua
+msgid "Set status \"%1\"?"
+msgstr "Встановити статус «%1»?"
+
+#: goodreads_menu.lua
+msgid "Session cookies…"
+msgstr "Cookies сесії…"
+
+#: goodreads_menu.lua
+msgid "Autolink by GOODREADS identifier"
+msgstr "Автолінк за ідентифікатором GOODREADS"
+
+#: goodreads_menu.lua
+msgid "When a book contains a GOODREADS identifier in its metadata, link it automatically on open (on by default)."
+msgstr "Якщо в метаданих книги є ідентифікатор GOODREADS, зв'язувати її автоматично при відкритті (увімкнено за замовчуванням)."
+
+#: goodreads_menu.lua
+msgid "Autolink by ISBN"
+msgstr "Автолінк за ISBN"
+
+#: goodreads_menu.lua
+msgid "If there is no GOODREADS id, search Goodreads by ISBN and link the first match (on by default). Does not search by title."
+msgstr "Якщо немає ідентифікатора GOODREADS, шукати книгу за ISBN і зв'язувати перший збіг (увімкнено за замовчуванням). За назвою не шукає."
+
+#: goodreads_menu.lua
+msgid "Auto-tracking for new books"
+msgstr "Автовідстеження для нових книг"
+
+#: goodreads_menu.lua
+msgid "When enabled, auto-tracking is on for linked books without an explicit per-book toggle."
+msgstr "Якщо увімкнено, автовідстеження працює для зв'язаних книг без явного перемикача для кожної книги."
+
+#: goodreads_menu.lua
+msgid "Sync rating (★)"
+msgstr "Синхронізувати оцінку (★)"
+
+#: goodreads_menu.lua
+msgid "When marking Finished, send the KOReader Book Status rating (1–5★)."
+msgstr "При позначенні «Прочитано» надсилати оцінку з KOReader Book Status (1–5★)."
+
+#: goodreads_menu.lua
+msgid "Sync reading progress"
+msgstr "Синхронізувати прогрес читання"
+
+#: goodreads_menu.lua
+msgid "While auto-tracking Currently reading, post percent to Goodreads (at most once a minute). Shows up as a status update. Off if you do not want feed noise."
+msgstr "Поки книга в статусі «Читаю зараз» і увімкнено автовідстеження, надсилати відсоток на Goodreads (не частіше разу на хвилину). З'являється як оновлення статусу. Вимкніть, якщо не хочете шум у стрічці."
+
+#: goodreads_menu.lua
+msgid "Enable Wi-Fi on demand"
+msgstr "Вмикати Wi-Fi за потреби"
+
+#: goodreads_menu.lua
+msgid "Confirm status changes"
+msgstr "Підтверджувати зміни статусу"
+
+#: goodreads_menu.lua
+msgid "goodreads.com session cookies"
+msgstr "Cookies сесії goodreads.com"
+
+#: goodreads_menu.lua
+msgid ""
+"Paste the Cookie request header from a logged-in goodreads.com tab:\n"
+"DevTools (F12) → Network → reload → any www.goodreads.com request → Request Headers → Cookie.\n"
+"\n"
+"Need both the Rails session (_session_id2) and Amazon SSO cookies (at-main, session-token, …). Copying the whole header is easiest. jwt_token is stripped automatically (it expires in minutes and breaks requests if stale)."
+msgstr ""
+"Вставте заголовок Cookie з вкладки, де ви залогінені на goodreads.com:\n"
+"DevTools (F12) → Network → оновити → будь-який запит до www.goodreads.com → Request Headers → Cookie.\n"
+"\n"
+"Потрібні і Rails-сесія (_session_id2), і Amazon SSO (at-main, session-token, …). Найпростіше скопіювати весь заголовок. jwt_token прибирається сам (живе хвилини і ламає запити, якщо протух)."
+
+#: goodreads_menu.lua
+msgid "Save"
+msgstr "Зберегти"
+
+#: goodreads_menu.lua
+msgid "Cookies saved"
+msgstr "Cookies збережено"
+
+#: goodreads_menu.lua
+msgid "Book: %1"
+msgstr "Книга: %1"
+
+#: goodreads_menu.lua
+msgid "Link book…"
+msgstr "Зв'язати книгу…"
+
+#: goodreads_menu.lua
+msgid "Unlink book from Goodreads?"
+msgstr "Прибрати зв'язок книги з Goodreads?"
+
+#: goodreads_menu.lua
+msgid "Link removed"
+msgstr "Зв'язок прибрано"
+
+#: goodreads_menu.lua
+msgid "Auto-track progress"
+msgstr "Автовідстеження прогресу"
+
+#: goodreads_menu.lua
+msgid "Automatically set Currently reading while reading, post percent to Goodreads, and Finished at ~100% / Book Status."
+msgstr "Автоматично встановлює «Читаю зараз» під час читання, надсилає відсоток на Goodreads і «Прочитано» при ~100% / Book Status."
+
+#: goodreads_menu.lua
+msgid "Change status"
+msgstr "Змінити статус"
+
+#: goodreads_menu.lua
+msgid "Send rating (%1★)"
+msgstr "Надіслати оцінку (%1★)"
+
+#: goodreads_menu.lua
+msgid "Send rating"
+msgstr "Надіслати оцінку"
+
+#: goodreads_menu.lua
+msgid "Take ★ from KOReader Book Status and send to Goodreads (scale 1–5)."
+msgstr "Взяти ★ з KOReader Book Status і надіслати на Goodreads (шкала 1–5)."
+
+#: goodreads_menu.lua
+msgid "Settings"
+msgstr "Налаштування"
+
+#: goodreads_menu.lua
+msgid "About"
+msgstr "Про програму"
+
+#: goodreads_menu.lua
+msgid "Goodreads ✓"
+msgstr "Goodreads ✓"

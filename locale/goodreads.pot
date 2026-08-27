@@ -1,0 +1,325 @@
+# goodreads.koplugin translation template.
+# Copyright (C) YEAR THE PACKAGE COPYRIGHT HOLDER
+# This file is distributed under the same license as the goodreads package.
+
+msgid ""
+msgstr ""
+"Project-Id-Version: goodreads.koplugin\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-26 12:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: _meta.lua
+msgid "Goodreads"
+msgstr ""
+
+#: _meta.lua
+msgid "Sync reading status, progress, and ratings with goodreads.com"
+msgstr ""
+
+#: main.lua
+msgid ""
+"Goodreads: session expired.\n"
+"\n"
+"Update cookies in Goodreads → Settings → Session cookies,\n"
+"or in goodreads_config.lua (DevTools → Application → Cookies → goodreads.com).\n"
+"\n"
+"You do not need to restart KOReader — changes apply immediately."
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: %1"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: Link book"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: Status — Currently reading"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: Status — Finished"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: Enable auto-tracking"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: Disable auto-tracking"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: Send rating"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: open a book to link it"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: link a book first"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: auto-tracking enabled"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: auto-tracking disabled"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: link a book and open it"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: link a book first via Goodreads → Link book"
+msgstr ""
+
+#: main.lua
+msgid ""
+"Goodreads: no rating in KOReader Book Status (★).\n"
+"Set stars and try again."
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: rating %1★ sent"
+msgstr ""
+
+#: goodreads_api.lua
+msgid "Want to read"
+msgstr ""
+
+#: goodreads_api.lua
+msgid "Finished"
+msgstr ""
+
+#: goodreads_api.lua
+msgid "Currently reading"
+msgstr ""
+
+#: goodreads_api.lua
+msgid "Did not finish"
+msgstr ""
+
+#: goodreads_api.lua
+msgid "Paused"
+msgstr ""
+
+#: goodreads_api.lua
+msgid "Status removed"
+msgstr ""
+
+#: goodreads_api.lua
+msgid "Unknown status"
+msgstr ""
+
+#: goodreads_api_legacy.lua
+msgid "No network connection"
+msgstr ""
+
+#: goodreads_api_legacy.lua
+msgid "Could not parse the Goodreads response. The site may have changed."
+msgstr ""
+
+#: goodreads_api_legacy.lua
+msgid "Network error: %1"
+msgstr ""
+
+#: goodreads_api_legacy.lua
+msgid "Error updating rating"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Yes"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Linking by Goodreads id…"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Linking by ISBN…"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Book linked: %1"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Search book on Goodreads"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Search"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Cancel"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Searching on Goodreads…"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid ""
+"Nothing found for \"%1\".\n"
+"Try another query?"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "New query"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "↩ New search"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Search results"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Book is not linked to Goodreads"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Updating status on Goodreads…"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Set status \"%1\"?"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Session cookies…"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Autolink by GOODREADS identifier"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "When a book contains a GOODREADS identifier in its metadata, link it automatically on open (on by default)."
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Autolink by ISBN"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "If there is no GOODREADS id, search Goodreads by ISBN and link the first match (on by default). Does not search by title."
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Auto-tracking for new books"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "When enabled, auto-tracking is on for linked books without an explicit per-book toggle."
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Sync rating (★)"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "When marking Finished, send the KOReader Book Status rating (1–5★)."
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Sync reading progress"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "While auto-tracking Currently reading, post percent to Goodreads (at most once a minute). Shows up as a status update. Off if you do not want feed noise."
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Enable Wi-Fi on demand"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Confirm status changes"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "goodreads.com session cookies"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid ""
+"Paste the Cookie request header from a logged-in goodreads.com tab:\n"
+"DevTools (F12) → Network → reload → any www.goodreads.com request → Request Headers → Cookie.\n"
+"\n"
+"Need both the Rails session (_session_id2) and Amazon SSO cookies (at-main, session-token, …). Copying the whole header is easiest. jwt_token is stripped automatically (it expires in minutes and breaks requests if stale)."
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Save"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Cookies saved"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Book: %1"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Link book…"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Unlink book from Goodreads?"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Link removed"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Auto-track progress"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Automatically set Currently reading while reading, post percent to Goodreads, and Finished at ~100% / Book Status."
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Change status"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Send rating (%1★)"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Send rating"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Take ★ from KOReader Book Status and send to Goodreads (scale 1–5)."
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Settings"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "About"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Goodreads ✓"
+msgstr ""
