@@ -592,17 +592,14 @@ function GoodreadsPlugin:_maybeAutoTrackProgress(opts)
   end
 
   local percent = self:_readingPercent()
-  if not percent then
-    logger.dbg("Goodreads: auto-track skip — no percent_finished")
-    return
-  end
-
-  local pct = percent * 100
+  local pct = percent and (percent * 100) or 0
   local silent_opts = { silent = true, filename = file, ensure = opts.ensure }
-  if pct >= 99.5 then
+  if percent and pct >= 99.5 then
     logger.info("Goodreads: auto-track Finished (" .. string.format("%.1f", pct) .. "%)")
     self:_quickSetStatus(1, silent_opts)
-  elseif pct >= self.settings:markReadingAtPercent() then
+  else
+    -- Currently reading as soon as you start (link / first pages). Do not wait
+    -- for 1%: front matter is often still 0.x%
     if current ~= 2 or opts.ensure then
       logger.info("Goodreads: auto-track Currently reading (" .. string.format("%.1f", pct) .. "%)")
       self:_quickSetStatus(2, silent_opts)

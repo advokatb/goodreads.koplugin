@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.0] - 2026-08-27
 
 ### Added
 - Menu item **Update progress: N%** (and a gesture) to post the current percent
@@ -12,6 +12,9 @@
 - Switching to a custom exclusive shelf (e.g. Paused) no longer leaves a
   leftover Finished/DNF/`-2` in sidecar `status`. Lua omits `status = nil`;
   the write now UNSETs it. Update progress trusts `shelf` when it is set.
+- Auto-track sets **Currently reading** as soon as the book is linked (and on
+  the first pages). It no longer waits for 1% progress, so a
+  new book is not left unshelved after autolink.
 - After Kobo resume, do not show a blocking “no network” dialog while Wi-Fi
   is up but DHCP has not finished. Background sync waits for a real
   connection and retries once; a leftover network error is a 3s toast.
