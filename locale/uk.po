@@ -68,6 +68,10 @@ msgid "Goodreads: Send rating"
 msgstr "Goodreads: Надіслати оцінку"
 
 #: main.lua
+msgid "Goodreads: Update progress"
+msgstr "Goodreads: Оновити прогрес"
+
+#: main.lua
 msgid "Goodreads: open a book to link it"
 msgstr "Goodreads: відкрийте книгу, щоб зв'язати її"
 
@@ -102,6 +106,22 @@ msgstr ""
 #: main.lua
 msgid "Goodreads: rating %1★ sent"
 msgstr "Goodreads: оцінку %1★ надіслано"
+
+#: main.lua
+msgid "Goodreads: progress updates are for books you are reading. Use Change status if this book is Finished or DNF."
+msgstr "Goodreads: прогрес можна надсилати для книг, які ви читаєте. Якщо книга «Прочитано» або DNF, змініть статус."
+
+#: main.lua
+msgid "Goodreads: not enough reading progress yet"
+msgstr "Goodreads: ще недостатньо прогресу читання"
+
+#: main.lua
+msgid "Goodreads: book is almost finished. Use Change status → Finished."
+msgstr "Goodreads: книга майже дочитана. Поставте статус «Прочитано»."
+
+#: main.lua
+msgid "Goodreads: progress %1% sent"
+msgstr "Goodreads: прогрес %1% надіслано"
 
 #: goodreads_api.lua
 msgid "Want to read"
@@ -252,8 +272,8 @@ msgid "Sync reading progress"
 msgstr "Синхронізувати прогрес читання"
 
 #: goodreads_menu.lua
-msgid "While auto-tracking Currently reading, post percent to Goodreads (at most once a minute). Shows up as a status update. Off if you do not want feed noise."
-msgstr "Поки книга в статусі «Читаю зараз» і увімкнено автовідстеження, надсилати відсоток на Goodreads (не частіше разу на хвилину). З'являється як оновлення статусу. Вимкніть, якщо не хочете шум у стрічці."
+msgid "While auto-tracking Currently reading, post percent to Goodreads (at most once a minute). Shows up as a status update. Off if you do not want automatic feed posts; Menu → Update progress still works."
+msgstr "Поки книга в статусі «Читаю зараз» і увімкнено автовідстеження, надсилати відсоток на Goodreads (не частіше разу на хвилину). З'являється як оновлення статусу. Вимкніть, якщо не хочете автопости в стрічці; пункт меню «Оновити прогрес» при цьому працює."
 
 #: goodreads_menu.lua
 msgid "Enable Wi-Fi on demand"
@@ -314,6 +334,18 @@ msgstr "Автоматично встановлює «Читаю зараз» п
 #: goodreads_menu.lua
 msgid "Change status"
 msgstr "Змінити статус"
+
+#: goodreads_menu.lua
+msgid "Update progress: %1%"
+msgstr "Оновити прогрес: %1%"
+
+#: goodreads_menu.lua
+msgid "Update progress"
+msgstr "Оновити прогрес"
+
+#: goodreads_menu.lua
+msgid "Post the current KOReader percent to Goodreads as a status update. Works without auto-tracking. Want to read is switched to Currently reading. Finished / DNF / ~100% use Change status instead."
+msgstr "Надіслати поточний відсоток з KOReader на Goodreads (оновлення статусу). Працює без автовідстеження. «Хочу прочитати» перемикається на «Читаю зараз». Майже 100% — через «Прочитано»."
 
 #: goodreads_menu.lua
 msgid "Send rating (%1★)"

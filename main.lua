@@ -169,6 +169,13 @@ function GoodreadsPlugin:onDispatcherRegisterActions()
     title    = _("Goodreads: Send rating"),
     general  = true,
   })
+
+  Dispatcher:registerAction("goodreads_sync_progress", {
+    category = "none",
+    event    = "GoodreadsSyncProgress",
+    title    = _("Goodreads: Update progress"),
+    general  = true,
+  })
 end
 
 function GoodreadsPlugin:onGoodreadsLink()
@@ -222,6 +229,18 @@ function GoodreadsPlugin:onGoodreadsSyncRating()
   end
   self:_withWifi(function()
     self:syncRatingNow(true)
+  end)
+end
+
+function GoodreadsPlugin:onGoodreadsSyncProgress()
+  if not self.ui.document or not self.settings:bookLinked() then
+    UIManager:show(InfoMessage:new {
+      text = _("Goodreads: link a book and open it"),
+    })
+    return
+  end
+  self:_withWifi(function()
+    self:syncProgressNow(true)
   end)
 end
 
@@ -404,9 +423,6 @@ function GoodreadsPlugin:_canAutoSync(filename, opts)
   return true
 end
 
---- Start reading → Currently reading; ~100% → Finished.
--- Also POST percent to /user_status.json while Currently reading (optional).
--- @param opts { ensure=bool }  re-push status even if sidecar already matches
 function GoodreadsPlugin:_readingPercent()
   if not self.ui.document then return nil end
   local percent = nil
@@ -422,34 +438,122 @@ function GoodreadsPlugin:_readingPercent()
   return percent
 end
 
-function GoodreadsPlugin:_sendProgress(file, opts)
-  opts = opts or {}
-  if not file then return end
-  if not self.settings:syncProgressEnabled() then return end
-  if not self.settings:fileSyncEnabled(file) then return end
-  local edition_id = self.settings:readBookSetting(file, "edition_id")
-  if not edition_id then return end
+function GoodreadsPlugin:_progressPct()
+  local percent = self:_readingPercent()
+  if not percent then return nil end
+  return math.floor(percent * 100 + 0.5)
+end
+
+function GoodreadsPlugin:_progressBlockedByStatus(file)
+  if not file then return true end
+  local current = self.settings:readBookSetting(file, "status")
+  local shelf = self.settings:readBookSetting(file, "shelf")
+  return current == 1 or current == 3 or current == -2 or shelf == "read"
+end
+
+--- Manual "Update progress" is enabled when a percent can actually be posted.
+function GoodreadsPlugin:canSyncProgressNow()
+  local file = self.ui.document and self.ui.document.file
+  if not file or not self.settings:bookLinked() then return false end
+  if self:_progressBlockedByStatus(file) then return false end
+  local pct = self:_progressPct()
+  return pct ~= nil and pct >= 1 and pct < 99.5
+end
+
+--- Explicit progress push (menu / gesture). Independent of auto-track and of
+-- Settings → Sync reading progress (that toggle is only for automatic posts).
+-- Want to read / no shelf → Currently reading first. Custom exclusives (Paused)
+-- keep their shelf. Finished / DNF / ~100% are refused.
+function GoodreadsPlugin:syncProgressNow(show_feedback)
+  local file = self.ui.document and self.ui.document.file
+  if not file or not self.settings:bookLinked() then
+    if show_feedback then
+      UIManager:show(InfoMessage:new {
+        text = _("Goodreads: link a book and open it"),
+      })
+    end
+    return false
+  end
+
+  if self:_progressBlockedByStatus(file) then
+    if show_feedback then
+      UIManager:show(InfoMessage:new {
+        text = _("Goodreads: progress updates are for books you are reading. Use Change status if this book is Finished or DNF."),
+      })
+    end
+    return false
+  end
+
+  local pct = self:_progressPct()
+  if not pct or pct < 1 then
+    if show_feedback then
+      UIManager:show(InfoMessage:new {
+        text = _("Goodreads: not enough reading progress yet"),
+      })
+    end
+    return false
+  end
+  if pct >= 99.5 then
+    if show_feedback then
+      UIManager:show(InfoMessage:new {
+        text = _("Goodreads: book is almost finished. Use Change status → Finished."),
+      })
+    end
+    return false
+  end
 
   local current = self.settings:readBookSetting(file, "status")
   local shelf = self.settings:readBookSetting(file, "shelf")
-  if current == 1 or current == 3 or current == -2 or shelf == "read" then
-    return
+  local is_reading = current == 2 or shelf == "currently-reading"
+  local is_custom = type(shelf) == "string" and shelf ~= "" and not CORE_SHELVES[shelf]
+  if not is_reading and not is_custom then
+    local edition_id = self.settings:getLinkedEditionId()
+    local status_result = Api:set_status(edition_id, 2, nil, 0)
+    if not status_result or not status_result.ok then
+      return false
+    end
+    local reading_shelf = Api:shelfForStatus(2) or "currently-reading"
+    self.settings:updateBookSetting(file, { status = 2, shelf = reading_shelf })
+    self.state.current_status = 2
+    self.state.current_shelf = reading_shelf
+    self.state.ensure_remote_pending = false
   end
 
-  local percent = self:_readingPercent()
-  if not percent then return end
-  local pct = math.floor(percent * 100 + 0.5)
-  if pct < 1 then return end
-  if pct >= 99.5 then return end
+  local result = self:_sendProgress(file, { manual = true, force = true })
+  if result and result.ok then
+    if show_feedback then
+      UIManager:show(Notification:new {
+        text = T(_("Goodreads: progress %1% sent"), tostring(result.percent or pct)),
+        timeout = 3,
+      })
+    end
+    return true
+  end
+  return false
+end
+
+function GoodreadsPlugin:_sendProgress(file, opts)
+  opts = opts or {}
+  if not file then return nil end
+  if not opts.manual then
+    if not self.settings:syncProgressEnabled() then return nil end
+    if not self.settings:fileSyncEnabled(file) then return nil end
+  end
+  local edition_id = self.settings:readBookSetting(file, "edition_id")
+  if not edition_id then return nil end
+  if self:_progressBlockedByStatus(file) then return nil end
+
+  local pct = self:_progressPct()
+  if not pct or pct < 1 or pct >= 99.5 then return nil end
 
   local last = tonumber(self.settings:readBookSetting(file, "last_progress"))
   if not opts.force and last and math.abs(last - pct) < 1 then
-    return
+    return nil
   end
   if not opts.force then
     local now = os.time()
     if now - (self.state.last_auto_sync_at or 0) < MIN_AUTO_SYNC_INTERVAL then
-      return
+      return nil
     end
   end
 
@@ -457,9 +561,14 @@ function GoodreadsPlugin:_sendProgress(file, opts)
   if result and result.ok then
     self.settings:updateBookSetting(file, { last_progress = result.percent or pct })
     self.state.last_auto_sync_at = os.time()
+    return result
   end
+  return nil
 end
 
+--- Start reading → Currently reading; ~100% → Finished.
+-- Also POST percent to /user_status.json while Currently reading (optional).
+-- @param opts { ensure=bool }  re-push status even if sidecar already matches
 function GoodreadsPlugin:_maybeAutoTrackProgress(opts)
   opts = opts or {}
   if not self.ui.document then return end

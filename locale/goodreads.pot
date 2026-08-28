@@ -61,6 +61,10 @@ msgid "Goodreads: Send rating"
 msgstr ""
 
 #: main.lua
+msgid "Goodreads: Update progress"
+msgstr ""
+
+#: main.lua
 msgid "Goodreads: open a book to link it"
 msgstr ""
 
@@ -92,6 +96,22 @@ msgstr ""
 
 #: main.lua
 msgid "Goodreads: rating %1★ sent"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: progress updates are for books you are reading. Use Change status if this book is Finished or DNF."
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: not enough reading progress yet"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: book is almost finished. Use Change status → Finished."
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: progress %1% sent"
 msgstr ""
 
 #: goodreads_api.lua
@@ -241,7 +261,7 @@ msgid "Sync reading progress"
 msgstr ""
 
 #: goodreads_menu.lua
-msgid "While auto-tracking Currently reading, post percent to Goodreads (at most once a minute). Shows up as a status update. Off if you do not want feed noise."
+msgid "While auto-tracking Currently reading, post percent to Goodreads (at most once a minute). Shows up as a status update. Off if you do not want automatic feed posts; Menu → Update progress still works."
 msgstr ""
 
 #: goodreads_menu.lua
@@ -298,6 +318,18 @@ msgstr ""
 
 #: goodreads_menu.lua
 msgid "Change status"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Update progress: %1%"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Update progress"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Post the current KOReader percent to Goodreads as a status update. Works without auto-tracking. Want to read is switched to Currently reading. Finished / DNF / ~100% use Change status instead."
 msgstr ""
 
 #: goodreads_menu.lua

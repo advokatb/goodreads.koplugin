@@ -13,6 +13,7 @@ A [KOReader](https://github.com/koreader/koreader) plugin that syncs reading sta
 - Set status: **Want to read** / **Currently reading** / **Finished** / **Remove status**
 - Sync rating from KOReader Book Status (1–5★, same scale as Goodreads)
 - Auto-tracking: **Currently reading** while reading (optional percent via `POST /user_status.json`), **Finished** at ~100% / book completion (+ rating and today's date read)
+- Manual **Update progress: N%** in the Goodreads menu (and a gesture) — posts percent now, even if auto-tracking is off
 - Session cookies with live `Set-Cookie` rotation (`aws-waf-token` and friends)
 
 > Goodreads exclusive shelves are at least **Want to read / Currently reading / Read**. Extra exclusive shelves from the account (for example **Did not finish** or **Paused**) appear in the menu. Custom tag shelves are not listed.
@@ -69,6 +70,15 @@ Hold-tap **Book: …** to unlink. Tap **Book: …** again to re-search.
 
 The current status is cached in the sidecar and restored when you reopen the book.
 
+### Update progress
+
+1. Link the book and read at least 1%
+2. **Menu → Goodreads → Update progress: N%**
+
+This posts KOReader’s percent as a Goodreads status update immediately (no 60s wait). It does not require **Auto-track progress**. If the shelf is still **Want to read**, it is set to **Currently reading** first. Custom exclusive shelves such as **Paused** are left as-is. Near 100%, use **Change status → Finished** instead.
+
+Turn off **Settings → Sync reading progress** if you only want these manual posts, not automatic ones while reading.
+
 ### Rating (★)
 
 1. Set stars in KOReader **Book Status** (long-press status icon / book widget)
@@ -85,7 +95,7 @@ Scale: 1–5★ in KOReader = 1–5 on Goodreads (no conversion).
 4. At ~100%, EndOfBook, or Book Status = complete → **Finished** (+ rating + today's date read)
 5. Book Status = abandoned → **Did not finish** if that exclusive shelf exists on the account
 
-Requests are throttled (max once per minute). Turn off **Settings → Sync reading progress** if you do not want percent updates in the Goodreads feed. Custom exclusive shelves (not the three system ones) are left alone. **Enable Wi-Fi on demand** helps on devices that can restore Wi-Fi automatically.
+Requests are throttled (max once per minute). Turn off **Settings → Sync reading progress** if you do not want automatic percent updates in the Goodreads feed; **Update progress** in the menu still works. Custom exclusive shelves (not the three system ones) are left alone. **Enable Wi-Fi on demand** helps on devices that can restore Wi-Fi automatically.
 
 ### Autolink
 
@@ -102,6 +112,7 @@ In **Menu → Settings → Gestures**, you can assign:
 - **Goodreads: Status — Finished**
 - **Goodreads: Enable / Disable auto-tracking**
 - **Goodreads: Send rating**
+- **Goodreads: Update progress**
 
 ## Data storage
 

@@ -457,7 +457,7 @@ function GoodreadsMenu:getSettingsSubMenuItems()
         self.settings:setSyncProgressEnabled(not self.settings:syncProgressEnabled())
       end,
       keep_menu_open = true,
-      help_text = _("While auto-tracking Currently reading, post percent to Goodreads (at most once a minute). Shows up as a status update. Off if you do not want feed noise."),
+      help_text = _("While auto-tracking Currently reading, post percent to Goodreads (at most once a minute). Shows up as a status update. Off if you do not want automatic feed posts; Menu → Update progress still works."),
     },
     {
       text = _("Enable Wi-Fi on demand"),
@@ -593,6 +593,30 @@ function GoodreadsMenu:getSubMenuItems()
       sub_item_table_func = function()
         return self:getStatusSubMenuItems()
       end,
+    })
+  end
+
+  if has_book then
+    table.insert(items, {
+      text_func = function()
+        local pct = self.plugin and self.plugin:_progressPct()
+        if pct then
+          return T(_("Update progress: %1%"), tostring(pct))
+        end
+        return _("Update progress")
+      end,
+      enabled_func = function()
+        return self.plugin and self.plugin:canSyncProgressNow()
+      end,
+      callback = function()
+        if self.plugin then
+          self.plugin:_withWifi(function()
+            self.plugin:syncProgressNow(true)
+          end)
+        end
+      end,
+      help_text = _("Post the current KOReader percent to Goodreads as a status update. Works without auto-tracking. Want to read is switched to Currently reading. Finished / DNF / ~100% use Change status instead."),
+      keep_menu_open = true,
     })
   end
 

@@ -1,6 +1,12 @@
 # Changelog
 
-## [0.2.0] - 2026-08-27
+## [Unreleased]
+
+### Added
+- Menu item **Update progress: N%** (and a gesture) to post the current percent
+  to Goodreads on demand. Independent of auto-tracking and of **Sync reading
+  progress**. Want to read is switched to Currently reading; Finished / DNF /
+  ~100% still go through Change status.
 
 ### Fixed
 - After Kobo resume, do not show a blocking “no network” dialog while Wi-Fi

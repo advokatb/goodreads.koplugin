@@ -147,6 +147,7 @@ function GoodreadsSettings:setAutoLinkByIsbn(value)
 end
 
 --- POST /user_status.json percent while auto-tracking (on by default).
+-- Manual Menu → Update progress ignores this toggle.
 function GoodreadsSettings:syncProgressEnabled()
   local v = self:readSetting(GoodreadsSettings.KEY_SYNC_PROGRESS)
   if v == nil then return true end
