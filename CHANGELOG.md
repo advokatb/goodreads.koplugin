@@ -9,6 +9,9 @@
   ~100% still go through Change status.
 
 ### Fixed
+- Switching to a custom exclusive shelf (e.g. Paused) no longer leaves a
+  leftover Finished/DNF/`-2` in sidecar `status`. Lua omits `status = nil`;
+  the write now UNSETs it. Update progress trusts `shelf` when it is set.
 - After Kobo resume, do not show a blocking “no network” dialog while Wi-Fi
   is up but DHCP has not finished. Background sync waits for a real
   connection and retries once; a leftover network error is a 3s toast.

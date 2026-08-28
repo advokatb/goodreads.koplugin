@@ -298,8 +298,11 @@ function GoodreadsMenu:_doSetStatus(item, menu_instance)
       return
     end
 
+    -- Custom exclusive shelves (Paused, …) have no numeric code. Lua omits
+    -- `status = nil`, so the sidecar would keep a leftover Finished/DNF/-2 and
+    -- grey out Update progress. UNSET deletes the key; shelf is the source of truth.
     local update = {
-      status = status_code,
+      status = status_code ~= nil and status_code or GoodreadsSettings.UNSET,
       shelf  = shelf,
     }
     if status_code == -2 then

@@ -446,9 +446,14 @@ end
 
 function GoodreadsPlugin:_progressBlockedByStatus(file)
   if not file then return true end
-  local current = self.settings:readBookSetting(file, "status")
   local shelf = self.settings:readBookSetting(file, "shelf")
-  return current == 1 or current == 3 or current == -2 or shelf == "read"
+  local current = self.settings:readBookSetting(file, "status")
+  -- Exclusive `shelf` wins: a leftover numeric status from a custom-shelf
+  -- switch must not look like Finished/DNF.
+  if type(shelf) == "string" and shelf ~= "" then
+    return shelf == "read" or shelf == "did-not-finish"
+  end
+  return current == 1 or current == 3 or current == -2
 end
 
 --- Manual "Update progress" is enabled when a percent can actually be posted.
