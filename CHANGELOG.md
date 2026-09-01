@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0] - 2026-09-01
+
+### Fixed
+- Stale CSRF: cookie rotation now drops the cached token, and a POST that
+  returns **404** (Goodreads’ usual response for a dead authenticity_token)
+  retries once after `GET /`. Failed progress posts are throttled so they
+  do not fire on every page turn.
+
 ## [0.2.0] - 2026-08-27
 
 ### Added

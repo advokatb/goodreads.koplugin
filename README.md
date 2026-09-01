@@ -91,7 +91,7 @@ Scale: 1–5★ in KOReader = 1–5 on Goodreads (no conversion).
 
 1. Link the book
 2. Enable **Auto-track progress** in the Goodreads menu (or globally: **Settings → Auto-tracking for new books**)
-3. At ≥1% progress → **Currently reading**, and percent is posted to Goodreads (status update; at most once a minute)
+3. On link (or as soon as you start turning pages) → **Currently reading**, and percent is posted to Goodreads once it is ≥1% (status update; at most once a minute)
 4. At ~100%, EndOfBook, or Book Status = complete → **Finished** (+ rating + today's date read)
 5. Book Status = abandoned → **Did not finish** if that exclusive shelf exists on the account
 

@@ -183,6 +183,10 @@ function GoodreadsApiLegacy:_update_cookies_from_response(set_cookie_header)
   merged = GoodreadsApiLegacy.sanitizeCookie(merged)
   if merged ~= "" and merged ~= GoodreadsApiLegacy.sanitizeCookie(current_cookie) then
     self.settings:setCookie(merged)
+    -- authenticity_token is bound to the Rails session. A rotated _session_id2
+    -- with a cached CSRF makes POSTs 404 until we fetch a new meta token.
+    self:reset_csrf_token()
+    logger.info("Goodreads: cookies rotated, CSRF cache cleared")
   end
 end
 
@@ -206,7 +210,9 @@ function GoodreadsApiLegacy:_is_session_expired(code, body, headers)
 end
 
 function GoodreadsApiLegacy:_is_csrf_invalid(code, body)
-  if code == 422 then return true end
+  -- Goodreads XHR often returns 404 (empty/HTML) for a stale authenticity_token
+  -- instead of 422 + "Can't verify CSRF token authenticity".
+  if code == 422 or code == 404 then return true end
   if not body then return false end
   if body:find("Can't verify CSRF token authenticity", 1, true) then return true end
   if body:find("InvalidAuthenticityToken", 1, true) then return true end

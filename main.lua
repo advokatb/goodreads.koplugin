@@ -568,6 +568,8 @@ function GoodreadsPlugin:_sendProgress(file, opts)
     self.state.last_auto_sync_at = os.time()
     return result
   end
+  -- Failed POST must still throttle: otherwise every page turn retries (404 spam).
+  self.state.last_auto_sync_at = os.time()
   return nil
 end
 
