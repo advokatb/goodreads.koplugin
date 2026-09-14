@@ -71,6 +71,7 @@ local function absolute_url(url)
 end
 
 -- Rails XHR writes (rating stars, some form posts) return 204 No Content.
+-- HTTP 202 here is AWS WAF (x-amzn-waf-action: challenge), not success.
 local function is_success_code(code)
   return code == 200 or code == 201 or code == 204
 end
@@ -209,6 +210,25 @@ function GoodreadsApiLegacy:_is_session_expired(code, body, headers)
   return false
 end
 
+-- AWS WAF interstitial: HTTP 202 + x-amzn-waf-action (often "challenge").
+-- Must not be reported as a generic "Network error: 202".
+function GoodreadsApiLegacy:_is_waf_challenge(code, headers)
+  if code == 202 then return true end
+  if not headers then return false end
+  local waf = headers["x-amzn-waf-action"] or headers["X-Amzn-Waf-Action"]
+  return waf ~= nil and tostring(waf) ~= ""
+end
+
+function GoodreadsApiLegacy:_auth_error(code, body, headers)
+  if self:_is_waf_challenge(code, headers) then
+    return "waf_challenge"
+  end
+  if self:_is_session_expired(code, body, headers) then
+    return "session_expired"
+  end
+  return nil
+end
+
 function GoodreadsApiLegacy:_is_csrf_invalid(code, body)
   -- Goodreads XHR often returns 404 (empty/HTML) for a stale authenticity_token
   -- instead of 422 + "Can't verify CSRF token authenticity".
@@ -334,9 +354,10 @@ function GoodreadsApiLegacy:_ensure_csrf_token(force)
     report_error(self, _("No network connection"))
     return nil
   end
-  if self:_is_session_expired(code, body, resp_headers) then
+  local auth_err = self:_auth_error(code, body, resp_headers)
+  if auth_err then
     self:reset_csrf_token()
-    report_error(self, "session_expired")
+    report_error(self, auth_err)
     return nil
   end
 
@@ -356,9 +377,10 @@ function GoodreadsApiLegacy:_ensure_csrf_token(force)
       report_error(self, _("No network connection"))
       return nil
     end
-    if self:_is_session_expired(code, body, resp_headers) then
+    auth_err = self:_auth_error(code, body, resp_headers)
+    if auth_err then
       self:reset_csrf_token()
-      report_error(self, "session_expired")
+      report_error(self, auth_err)
       return nil
     end
     if (code == 301 or code == 302 or code == 303) and resp_headers then
@@ -375,9 +397,10 @@ function GoodreadsApiLegacy:_ensure_csrf_token(force)
           report_error(self, _("No network connection"))
           return nil
         end
-        if self:_is_session_expired(code, body, resp_headers) then
+        auth_err = self:_auth_error(code, body, resp_headers)
+        if auth_err then
           self:reset_csrf_token()
-          report_error(self, "session_expired")
+          report_error(self, auth_err)
           return nil
         end
       end
@@ -385,7 +408,8 @@ function GoodreadsApiLegacy:_ensure_csrf_token(force)
   end
 
   if code ~= 200 then
-    report_error(self, T(_("Network error: %1"), tostring(code)))
+    auth_err = self:_auth_error(code, body, resp_headers)
+    report_error(self, auth_err or T(_("Network error: %1"), tostring(code)))
     return nil
   end
 
@@ -446,8 +470,9 @@ function GoodreadsApiLegacy:search(query)
       report_error(self, _("No network connection"))
       return nil
     end
-    if self:_is_session_expired(code, response, headers) then
-      report_error(self, "session_expired")
+    local auth_err = self:_auth_error(code, response, headers)
+    if auth_err then
+      report_error(self, auth_err)
       return nil
     end
     if self:_is_csrf_invalid(code, response) then
@@ -508,8 +533,9 @@ function GoodreadsApiLegacy:get_book(book_id)
     report_error(self, _("No network connection"))
     return nil
   end
-  if self:_is_session_expired(code, body, headers) then
-    report_error(self, "session_expired")
+  local auth_err = self:_auth_error(code, body, headers)
+  if auth_err then
+    report_error(self, auth_err)
     return nil
   end
   if code ~= 200 then
@@ -564,8 +590,9 @@ function GoodreadsApiLegacy:get_review_state(book_id)
     report_error(self, _("No network connection"))
     return nil
   end
-  if self:_is_session_expired(code, body, headers) then
-    report_error(self, "session_expired")
+  local auth_err = self:_auth_error(code, body, headers)
+  if auth_err then
+    report_error(self, auth_err)
     return nil
   end
   if code ~= 200 then
@@ -616,9 +643,10 @@ function GoodreadsApiLegacy:_add_to_shelf(book_id, shelf_name, action)
       report_error(self, msg)
       return { ok = false, error_text = msg }
     end
-    if self:_is_session_expired(code, response, headers) then
-      report_error(self, "session_expired")
-      return { ok = false, error_text = "session_expired" }
+    local auth_err = self:_auth_error(code, response, headers)
+    if auth_err then
+      report_error(self, auth_err)
+      return { ok = false, error_text = auth_err }
     end
     if self:_is_csrf_invalid(code, response) then
       return { _retry_csrf = true }
@@ -708,9 +736,10 @@ function GoodreadsApiLegacy:set_date_finished(book_id, when)
   if not code then
     return { ok = false, error_text = _("No network connection") }
   end
-  if self:_is_session_expired(code, body, headers) then
-    report_error(self, "session_expired")
-    return { ok = false, error_text = "session_expired" }
+  local auth_err = self:_auth_error(code, body, headers)
+  if auth_err then
+    report_error(self, auth_err)
+    return { ok = false, error_text = auth_err }
   end
   if code ~= 200 then
     return { ok = false, error_text = T(_("Network error: %1"), tostring(code)) }
@@ -738,7 +767,7 @@ function GoodreadsApiLegacy:set_date_finished(book_id, when)
     ["X-Requested-With"] = "XMLHttpRequest",
     ["Referer"]          = BASE_URL .. "/review/edit/" .. book_id,
   }
-  local ncode, nrow = self:_request(
+  local ncode, nrow, nheaders = self:_request(
     "GET",
     BASE_URL .. "/reading_sessions/new?book_id=" .. book_id,
     nil,
@@ -746,6 +775,11 @@ function GoodreadsApiLegacy:set_date_finished(book_id, when)
   )
   if not ncode then
     return { ok = false, error_text = _("No network connection") }
+  end
+  local nauth = self:_auth_error(ncode, nrow, nheaders)
+  if nauth then
+    report_error(self, nauth)
+    return { ok = false, error_text = nauth }
   end
   if ncode ~= 200 then
     return { ok = false, error_text = T(_("Network error: %1"), tostring(ncode)) }
@@ -793,9 +827,10 @@ function GoodreadsApiLegacy:set_date_finished(book_id, when)
     report_error(self, msg)
     return { ok = false, error_text = msg }
   end
-  if self:_is_session_expired(pcode, nil, pheaders) then
-    report_error(self, "session_expired")
-    return { ok = false, error_text = "session_expired" }
+  local pauth = self:_auth_error(pcode, nil, pheaders)
+  if pauth then
+    report_error(self, pauth)
+    return { ok = false, error_text = pauth }
   end
   if not is_success_code(pcode) and pcode ~= 302 and pcode ~= 303 then
     local msg = T(_("Network error: %1"), tostring(pcode))
@@ -835,9 +870,10 @@ function GoodreadsApiLegacy:set_rating(book_id, rating)
       report_error(self, msg)
       return { ok = false, error_text = msg }
     end
-    if self:_is_session_expired(code, response, headers) then
-      report_error(self, "session_expired")
-      return { ok = false, error_text = "session_expired" }
+    local auth_err = self:_auth_error(code, response, headers)
+    if auth_err then
+      report_error(self, auth_err)
+      return { ok = false, error_text = auth_err }
     end
     if self:_is_csrf_invalid(code, response) then
       return { _retry_csrf = true }
@@ -893,9 +929,10 @@ function GoodreadsApiLegacy:set_progress(book_id, percent)
       logger.warn("Goodreads: progress post failed — no network")
       return { ok = false, error_text = _("No network connection") }
     end
-    if self:_is_session_expired(code, response, headers) then
-      report_error(self, "session_expired")
-      return { ok = false, error_text = "session_expired" }
+    local auth_err = self:_auth_error(code, response, headers)
+    if auth_err then
+      report_error(self, auth_err)
+      return { ok = false, error_text = auth_err }
     end
     if self:_is_csrf_invalid(code, response) then
       return { _retry_csrf = true }
@@ -948,9 +985,10 @@ function GoodreadsApiLegacy:remove_status(book_id, _current_status, _current_she
       report_error(self, msg)
       return { ok = false, error_text = msg }
     end
-    if self:_is_session_expired(code, response, headers) then
-      report_error(self, "session_expired")
-      return { ok = false, error_text = "session_expired" }
+    local auth_err = self:_auth_error(code, response, headers)
+    if auth_err then
+      report_error(self, auth_err)
+      return { ok = false, error_text = auth_err }
     end
     if self:_is_csrf_invalid(code, response) then
       return { _retry_csrf = true }

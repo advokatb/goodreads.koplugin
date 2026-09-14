@@ -102,6 +102,20 @@ You do not need to restart KOReader — changes apply immediately.]]),
     return
   end
 
+  if err == "waf_challenge" then
+    UIManager:show(InfoMessage:new {
+      text = _([[Goodreads: AWS blocked the request.
+
+Refresh cookies from a logged-in browser (include aws-waf-token).
+Paste them in Goodreads → Settings → Session cookies,
+or in goodreads_config.lua.
+
+You do not need to restart KOReader — changes apply immediately.]]),
+      icon = "notice-warning",
+    })
+    return
+  end
+
   -- Transient: Wi-Fi radio up but no IP yet (Kobo resume). Don't block the screen.
   if err == _("No network connection") then
     UIManager:show(Notification:new {

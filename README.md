@@ -125,7 +125,7 @@ In **Menu → Settings → Gestures**, you can assign:
 
 ## Updating cookies
 
-Goodreads cookies expire (especially `_session_id2`). The plugin applies `Set-Cookie` from responses. Refresh the full bundle from the browser when you see “Goodreads: session expired”.
+Goodreads cookies expire (especially `_session_id2`). The plugin applies `Set-Cookie` from responses. Refresh the full bundle from a logged-in browser when you see “Goodreads: session expired” or “AWS blocked the request” (HTTP 202 / WAF — include `aws-waf-token`).
 
 You do not need to restart KOReader after pasting new cookies.
 

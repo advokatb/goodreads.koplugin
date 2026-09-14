@@ -33,6 +33,17 @@ msgid ""
 msgstr ""
 
 #: main.lua
+msgid ""
+"Goodreads: AWS blocked the request.\n"
+"\n"
+"Refresh cookies from a logged-in browser (include aws-waf-token).\n"
+"Paste them in Goodreads → Settings → Session cookies,\n"
+"or in goodreads_config.lua.\n"
+"\n"
+"You do not need to restart KOReader — changes apply immediately."
+msgstr ""
+
+#: main.lua
 msgid "Goodreads: %1"
 msgstr ""
 
