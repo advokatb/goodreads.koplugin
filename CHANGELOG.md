@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.4.0] - 2026-09-18
+
+### Added
+- **Test connection** in Settings: `GET /review/list` checks that cookies still
+  work and names WAF / expired session instead of a generic network error.
+- Offline queue for progress and status. Automatic sync never turns Wi‑Fi on;
+  queued writes flush when the device is online again (reconnect or Test
+  connection). Closing a book while offline keeps the last percent.
+
+### Changed
+- CSRF is fetched from **`GET /review/list`** first (classic Rails, less WAF
+  than the homepage). `GET /` is only a fallback.
+- Progress POSTs send `authenticity_token` in the form body as well as
+  `X-CSRF-Token`.
+- Menu actions follow KOReader Network → Wi‑Fi enable action. Background
+  auto-track / autolink do not toggle the radio.
+- No Goodreads requests until session cookies are saved (no error spam on
+  first open).
+
 ## [0.3.1] - 2026-09-14
 
 ### Fixed

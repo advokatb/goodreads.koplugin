@@ -142,6 +142,10 @@ function GoodreadsMenu:linkByIsbn(isbn, done_callback, opts)
 end
 
 function GoodreadsMenu:showLinkBookDialog(force_search, done_callback)
+  if self.plugin and not self.plugin:_hasSession() then
+    show_error(_("Goodreads: no session cookies. Paste them in Settings → Session cookies."))
+    return
+  end
   if not force_search then
     local gr_id = Identifiers.getGoodreadsId(self.ui)
     if gr_id then
@@ -277,6 +281,11 @@ function GoodreadsMenu:_doSetStatus(item, menu_instance)
     return
   end
 
+  if self.plugin and not self.plugin:_hasSession() then
+    show_error(_("Goodreads: no session cookies. Paste them in Settings → Session cookies."))
+    return
+  end
+
   local status_code = item.code
   local shelf = item.shelf
   local rating = 0
@@ -284,29 +293,7 @@ function GoodreadsMenu:_doSetStatus(item, menu_instance)
     rating = Api.koreaderToGoodreadsRating(self.settings:getKoreaderRating(file))
   end
 
-  local loading = InfoMessage:new { text = _("Updating status on Goodreads…") }
-  UIManager:show(loading)
-
-  UIManager:scheduleIn(0.1, function()
-    local result
-    if status_code == -2 then
-      result = Api:remove_status(
-        edition_id,
-        self.settings:getLinkedStatus(),
-        self.settings:getLinkedShelf()
-      )
-    else
-      result = Api:set_status(edition_id, status_code, nil, rating, shelf)
-    end
-    UIManager:close(loading)
-
-    if not result or not result.ok then
-      return
-    end
-
-    -- Custom exclusive shelves (Paused, …) have no numeric code. Lua omits
-    -- `status = nil`, so the sidecar would keep a leftover Finished/DNF/-2 and
-    -- grey out Update progress. UNSET deletes the key; shelf is the source of truth.
+  local function apply_local(result)
     local update = {
       status = status_code ~= nil and status_code or GoodreadsSettings.UNSET,
       shelf  = shelf,
@@ -317,8 +304,8 @@ function GoodreadsMenu:_doSetStatus(item, menu_instance)
       update.date_read = GoodreadsSettings.UNSET
       update.review_id = GoodreadsSettings.UNSET
     elseif status_code == 1 or shelf == "read" then
-      update.rating = result.rating or 0
-      if result.date_read then
+      update.rating = (result and result.rating) or rating or 0
+      if result and result.date_read then
         update.date_read = result.date_read
       end
     end
@@ -329,12 +316,15 @@ function GoodreadsMenu:_doSetStatus(item, menu_instance)
       self.state.current_shelf = (status_code == -2) and nil or shelf
       self.state.ensure_remote_pending = false
     end
+  end
 
+  local function finish_ui(result)
+    apply_local(result)
     if (status_code == 2 or shelf == "currently-reading") and self.plugin then
       self.plugin:_sendProgress(file, { force = true })
     end
 
-    local saved_rating = tonumber(result.rating) or 0
+    local saved_rating = tonumber(result and result.rating) or 0
     local status_text
     if status_code == -2 then
       status_text = Api:statusText(-2)
@@ -350,7 +340,50 @@ function GoodreadsMenu:_doSetStatus(item, menu_instance)
       menu_instance.item_table = self:getStatusSubMenuItems()
       menu_instance:updateItems()
     end
-  end)
+  end
+
+  local function do_remote()
+    local loading = InfoMessage:new { text = _("Updating status on Goodreads…") }
+    UIManager:show(loading)
+    UIManager:scheduleIn(0.1, function()
+      local result
+      if status_code == -2 then
+        result = Api:remove_status(
+          edition_id,
+          self.settings:getLinkedStatus(),
+          self.settings:getLinkedShelf()
+        )
+      else
+        result = Api:set_status(edition_id, status_code, nil, rating, shelf)
+      end
+      UIManager:close(loading)
+      if not result or not result.ok then
+        return
+      end
+      finish_ui(result)
+    end)
+  end
+
+  if self.plugin then
+    if not self.plugin:_withWifi(do_remote) then
+      apply_local(nil)
+      if status_code == -2 then
+        self.plugin:_enqueueStatus(file, -2, shelf, 0)
+      else
+        self.plugin:_enqueueStatus(file, status_code, shelf, rating)
+      end
+      if status_code == 2 or shelf == "currently-reading" then
+        self.plugin:_enqueueProgress(file)
+      end
+      self.plugin:_notifyOfflineSaved()
+      if menu_instance and menu_instance.updateItems then
+        menu_instance.item_table = self:getStatusSubMenuItems()
+        menu_instance:updateItems()
+      end
+    end
+  else
+    do_remote()
+  end
 end
 
 function GoodreadsMenu:getStatusSubMenuItems()
@@ -414,6 +447,16 @@ function GoodreadsMenu:getSettingsSubMenuItems()
       end,
     },
     {
+      text = _("Test connection"),
+      keep_menu_open = true,
+      callback = function()
+        if self.plugin then
+          self.plugin:testConnection()
+        end
+      end,
+      help_text = _("Check that the pasted cookies still work (GET /review/list). Distinguishes an expired session from an AWS WAF block."),
+    },
+    {
       text = _("Autolink by GOODREADS identifier"),
       checked_func = function()
         return self.settings:autoLinkByGoodreadsId()
@@ -469,7 +512,7 @@ function GoodreadsMenu:getSettingsSubMenuItems()
       help_text = _("While auto-tracking Currently reading, post percent to Goodreads (at most once a minute). Shows up as a status update. Off if you do not want automatic feed posts; Menu → Update progress still works."),
     },
     {
-      text = _("Enable Wi-Fi on demand"),
+      text = _("Prompt for Wi-Fi on menu actions"),
       checked_func = function()
         return self.settings:enableWifiOnDemand()
       end,
@@ -477,6 +520,7 @@ function GoodreadsMenu:getSettingsSubMenuItems()
         self.settings:setEnableWifiOnDemand(not self.settings:enableWifiOnDemand())
       end,
       keep_menu_open = true,
+      help_text = _("Menu actions (status, progress, Test connection) follow KOReader Network → Wi-Fi enable action. Automatic sync never turns Wi-Fi on: it queues until you are online."),
     },
     {
       text = _("Confirm status changes"),
@@ -526,6 +570,9 @@ Need both the Rails session (_session_id2) and Amazon SSO cookies (at-main, sess
               self.settings:clearSessionCache()
             end
             show_notification(_("Cookies saved"))
+            if self.plugin and self.plugin.onCookiesSaved then
+              self.plugin:onCookiesSaved()
+            end
           end
         end,
       },

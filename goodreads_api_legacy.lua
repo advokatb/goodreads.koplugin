@@ -252,7 +252,8 @@ function GoodreadsApiLegacy:_request(method, url, body, extra_headers, opts)
     self.settings and self.settings:getCookie() or ""
   )
   if cookie == "" then
-    return 401, "", nil
+    logger.dbg("Goodreads: skip request — no session cookie")
+    return nil, nil, nil
   end
   if not self._warned_incomplete_cookie then
     local has_session = cookie:find("_session_id2=", 1, true)
@@ -335,6 +336,31 @@ function GoodreadsApiLegacy:_request(method, url, body, extra_headers, opts)
   return code_num, response_body, resp_headers
 end
 
+function GoodreadsApiLegacy:_csrf_urls()
+  local urls = {}
+  local user_id = self.settings and self.settings:getUserId()
+  -- /review/list is classic Rails and is less often WAF-challenged than GET /.
+  if user_id then
+    table.insert(urls, BASE_URL .. "/review/list/" .. user_id .. "?shelf=read")
+  end
+  table.insert(urls, BASE_URL .. "/review/list")
+  table.insert(urls, BASE_URL .. "/")
+  return urls
+end
+
+function GoodreadsApiLegacy:_absorb_session_page(body)
+  if not body or body == "" then return nil end
+  local discovered = GoodreadsParser.parse_user_id(body)
+  if discovered and self.settings then
+    self.settings:setUserId(discovered)
+  end
+  local exclusive = GoodreadsParser.parse_exclusive_shelves(body)
+  if exclusive and self.settings then
+    self.settings:setExclusiveShelves(exclusive)
+  end
+  return GoodreadsParser.parse_csrf_token(body)
+end
+
 function GoodreadsApiLegacy:_ensure_csrf_token(force)
   if self._csrf_token and not force then
     return self._csrf_token
@@ -345,93 +371,80 @@ function GoodreadsApiLegacy:_ensure_csrf_token(force)
     ["X-Requested-With"] = nil,
   }
 
-  -- Homepage is classic Rails: csrf-token meta + /user/show/{id} in the nav.
-  -- /book/show and /search are Next.js and do not expose the meta tag.
-  local code, body, resp_headers = self:_request(
-    "GET", BASE_URL .. "/", nil, html_headers, { follow_redirects = true }
-  )
-  if not code then
-    report_error(self, _("No network connection"))
-    return nil
-  end
-  local auth_err = self:_auth_error(code, body, resp_headers)
-  if auth_err then
-    self:reset_csrf_token()
-    report_error(self, auth_err)
-    return nil
-  end
-
-  if code ~= 200 then
-    -- Fallback used before we knew GET / was enough.
-    local user_id = self.settings and self.settings:getUserId()
-    local url, opts
-    if user_id then
-      url = BASE_URL .. "/review/list/" .. user_id .. "?shelf=read"
-      opts = { follow_redirects = true }
-    else
-      url = BASE_URL .. "/review/list?shelf=read"
-      opts = { follow_redirects = false }
-    end
-    code, body, resp_headers = self:_request("GET", url, nil, html_headers, opts)
+  local token
+  for _, url in ipairs(self:_csrf_urls()) do
+    local code, body, resp_headers = self:_request(
+      "GET", url, nil, html_headers, { follow_redirects = true }
+    )
     if not code then
       report_error(self, _("No network connection"))
       return nil
     end
-    auth_err = self:_auth_error(code, body, resp_headers)
+    local auth_err = self:_auth_error(code, body, resp_headers)
     if auth_err then
       self:reset_csrf_token()
       report_error(self, auth_err)
       return nil
     end
-    if (code == 301 or code == 302 or code == 303) and resp_headers then
-      local loc = resp_headers.location or resp_headers.Location
-      if loc then
-        local discovered = GoodreadsParser.parse_user_id(loc)
-        if discovered and self.settings then
-          self.settings:setUserId(discovered)
-        end
-        code, body, resp_headers = self:_request(
-          "GET", absolute_url(loc), nil, html_headers, { follow_redirects = true }
-        )
-        if not code then
-          report_error(self, _("No network connection"))
-          return nil
-        end
-        auth_err = self:_auth_error(code, body, resp_headers)
-        if auth_err then
-          self:reset_csrf_token()
-          report_error(self, auth_err)
-          return nil
-        end
-      end
+    if code == 200 then
+      token = self:_absorb_session_page(body or "")
+      if token then break end
     end
   end
 
-  if code ~= 200 then
-    auth_err = self:_auth_error(code, body, resp_headers)
-    report_error(self, auth_err or T(_("Network error: %1"), tostring(code)))
-    return nil
-  end
-
-  local discovered = GoodreadsParser.parse_user_id(body or "")
-  if discovered and self.settings then
-    self.settings:setUserId(discovered)
-  end
-
-  local token = GoodreadsParser.parse_csrf_token(body or "")
   if not token then
     report_error(self, PARSE_ERROR)
     return nil
   end
 
-  local exclusive = GoodreadsParser.parse_exclusive_shelves(body or "")
-  if exclusive and self.settings then
-    self.settings:setExclusiveShelves(exclusive)
-  end
-
   self._csrf_token = token
   logger.info("Goodreads: cached CSRF token")
   return token
+end
+
+--- Check cookies against GET /review/list. Does not use on_error (caller shows UI).
+function GoodreadsApiLegacy:test_session()
+  local cookie = GoodreadsApiLegacy.sanitizeCookie(
+    self.settings and self.settings:getCookie() or ""
+  )
+  if cookie == "" then
+    return { ok = false, error = "no_cookies" }
+  end
+  if not NetworkMgr:isConnected() then
+    return { ok = false, error = "no_network" }
+  end
+
+  local html_headers = {
+    ["Accept"]           = "text/html,application/xhtml+xml",
+    ["X-Requested-With"] = nil,
+  }
+  local last_err
+  for _, url in ipairs(self:_csrf_urls()) do
+    local code, body, resp_headers = self:_request(
+      "GET", url, nil, html_headers, { follow_redirects = true }
+    )
+    if not code then
+      return { ok = false, error = "no_network" }
+    end
+    local auth_err = self:_auth_error(code, body, resp_headers)
+    if auth_err then
+      self:reset_csrf_token()
+      return { ok = false, error = auth_err }
+    end
+    if code == 200 then
+      local token = self:_absorb_session_page(body or "")
+      if token then
+        self._csrf_token = token
+        return {
+          ok      = true,
+          user_id = self.settings and self.settings:getUserId() or nil,
+        }
+      end
+    else
+      last_err = T(_("Network error: %1"), tostring(code))
+    end
+  end
+  return { ok = false, error = last_err or PARSE_ERROR }
 end
 
 function GoodreadsApiLegacy:_with_csrf(callback)
@@ -916,6 +929,7 @@ function GoodreadsApiLegacy:set_progress(book_id, percent)
       ["Origin"]           = BASE_URL,
     }
     local body = encode_form({
+      authenticity_token       = token,
       ["user_status[book_id]"] = book_id,
       ["user_status[percent]"] = tostring(pct),
     })

@@ -48,6 +48,42 @@ msgid "Goodreads: %1"
 msgstr ""
 
 #: main.lua
+msgid "Goodreads: saved offline · will sync when connected"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: synced %1 queued update(s)"
+msgstr ""
+
+#: main.lua
+msgid "Testing Goodreads connection…"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: connection OK (user %1)"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: connection OK"
+msgstr ""
+
+#: main.lua
+msgid "Waiting to sync: %1"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: no session cookies. Paste them in Settings → Session cookies."
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: no network connection"
+msgstr ""
+
+#: main.lua
+msgid "Connection failed"
+msgstr ""
+
+#: main.lua
 msgid "Goodreads: Link book"
 msgstr ""
 
@@ -236,6 +272,14 @@ msgid "Session cookies…"
 msgstr ""
 
 #: goodreads_menu.lua
+msgid "Test connection"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Check that the pasted cookies still work (GET /review/list). Distinguishes an expired session from an AWS WAF block."
+msgstr ""
+
+#: goodreads_menu.lua
 msgid "Autolink by GOODREADS identifier"
 msgstr ""
 
@@ -276,7 +320,11 @@ msgid "While auto-tracking Currently reading, post percent to Goodreads (at most
 msgstr ""
 
 #: goodreads_menu.lua
-msgid "Enable Wi-Fi on demand"
+msgid "Prompt for Wi-Fi on menu actions"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Menu actions (status, progress, Test connection) follow KOReader Network → Wi-Fi enable action. Automatic sync never turns Wi-Fi on: it queues until you are online."
 msgstr ""
 
 #: goodreads_menu.lua

@@ -41,6 +41,7 @@ GoodreadsSettings.KEY_AUTO_LINK_ISBN  = "auto_link_by_isbn"
 GoodreadsSettings.KEY_SYNC_PROGRESS   = "sync_progress"
 GoodreadsSettings.KEY_USER_ID         = "user_id"
 GoodreadsSettings.KEY_EXCLUSIVE_SHELVES = "exclusive_shelves"
+GoodreadsSettings.KEY_SYNC_QUEUE        = "sync_queue"
 
 function GoodreadsSettings:new(path, ui)
   local o = setmetatable({}, self)
@@ -82,6 +83,11 @@ function GoodreadsSettings:getCookie()
   return strip_jwt_token(cookie or "")
 end
 
+function GoodreadsSettings:hasCookie()
+  local cookie = self:getCookie()
+  return cookie ~= nil and cookie ~= ""
+end
+
 function GoodreadsSettings:setCookie(value)
   self:updateSetting(GoodreadsSettings.KEY_COOKIE, strip_jwt_token(value or ""))
 end
@@ -95,7 +101,9 @@ function GoodreadsSettings:setMenuConfirm(value)
 end
 
 function GoodreadsSettings:enableWifiOnDemand()
-  return self:readSetting(GoodreadsSettings.KEY_ENABLE_WIFI) == true
+  local v = self:readSetting(GoodreadsSettings.KEY_ENABLE_WIFI)
+  if v == nil then return true end
+  return v == true
 end
 
 function GoodreadsSettings:setEnableWifiOnDemand(value)
@@ -197,6 +205,70 @@ end
 --- Drop cached user_id so the next request rediscovers it from /review/list.
 function GoodreadsSettings:clearSessionCache()
   self:updateSetting(GoodreadsSettings.KEY_USER_ID, nil)
+end
+
+-- ─── Offline sync queue ──────────────────────────────────────────────────────
+
+function GoodreadsSettings:getSyncQueue()
+  local q = self:readSetting(GoodreadsSettings.KEY_SYNC_QUEUE)
+  if type(q) ~= "table" then return {} end
+  local list = {}
+  for _, op in ipairs(q) do
+    if type(op) == "table" and op.operation then
+      table.insert(list, op)
+    end
+  end
+  if #list == 0 then
+    for _, op in pairs(q) do
+      if type(op) == "table" and op.operation then
+        table.insert(list, op)
+      end
+    end
+  end
+  return list
+end
+
+function GoodreadsSettings:queueSize()
+  return #self:getSyncQueue()
+end
+
+--- Coalesce by operation+book_id so the latest progress/status wins.
+function GoodreadsSettings:enqueueSync(operation)
+  if type(operation) ~= "table" or not operation.operation then return end
+  local key = tostring(operation.operation) .. ":" .. tostring(operation.book_id or "")
+  local q = self:getSyncQueue()
+  local replaced = false
+  for i, item in ipairs(q) do
+    local item_key = tostring(item.operation) .. ":" .. tostring(item.book_id or "")
+    if item_key == key then
+      operation.queued_at = item.queued_at or os.time()
+      q[i] = operation
+      replaced = true
+      break
+    end
+  end
+  if not replaced then
+    operation.queued_at = os.time()
+    table.insert(q, operation)
+  end
+  self:updateSetting(GoodreadsSettings.KEY_SYNC_QUEUE, q)
+end
+
+function GoodreadsSettings:removeSync(operation, book_id)
+  local key = tostring(operation) .. ":" .. tostring(book_id or "")
+  local q = self:getSyncQueue()
+  local next_q = {}
+  for _, item in ipairs(q) do
+    local item_key = tostring(item.operation) .. ":" .. tostring(item.book_id or "")
+    if item_key ~= key then
+      table.insert(next_q, item)
+    end
+  end
+  self:updateSetting(GoodreadsSettings.KEY_SYNC_QUEUE, next_q)
+end
+
+function GoodreadsSettings:clearSyncQueue()
+  self:updateSetting(GoodreadsSettings.KEY_SYNC_QUEUE, {})
 end
 
 -- ─── Per-document (sidecar) settings ─────────────────────────────────────────

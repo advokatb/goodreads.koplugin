@@ -164,6 +164,10 @@ function GoodreadsApi:set_progress(book_id, percent)
   return self:_get_backend():set_progress(book_id, percent)
 end
 
+function GoodreadsApi:test_session()
+  return self:_get_backend():test_session()
+end
+
 function GoodreadsApi:remove_status(book_id, current_status, current_shelf)
   return self:_get_backend():remove_status(book_id, current_status, current_shelf)
 end

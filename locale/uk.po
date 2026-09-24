@@ -62,6 +62,42 @@ msgid "Goodreads: %1"
 msgstr "Goodreads: %1"
 
 #: main.lua
+msgid "Goodreads: saved offline · will sync when connected"
+msgstr "Goodreads: збережено офлайн · надішлеться, коли буде мережа"
+
+#: main.lua
+msgid "Goodreads: synced %1 queued update(s)"
+msgstr "Goodreads: надіслано з черги: %1"
+
+#: main.lua
+msgid "Testing Goodreads connection…"
+msgstr "Перевірка з'єднання з Goodreads…"
+
+#: main.lua
+msgid "Goodreads: connection OK (user %1)"
+msgstr "Goodreads: з'єднання в порядку (користувач %1)"
+
+#: main.lua
+msgid "Goodreads: connection OK"
+msgstr "Goodreads: з'єднання в порядку"
+
+#: main.lua
+msgid "Waiting to sync: %1"
+msgstr "У черзі на синхронізацію: %1"
+
+#: main.lua
+msgid "Goodreads: no session cookies. Paste them in Settings → Session cookies."
+msgstr "Goodreads: немає cookies сесії. Вставте їх у Налаштування → Cookies сесії."
+
+#: main.lua
+msgid "Goodreads: no network connection"
+msgstr "Goodreads: немає підключення до мережі"
+
+#: main.lua
+msgid "Connection failed"
+msgstr "Не вдалося підключитися"
+
+#: main.lua
 msgid "Goodreads: Link book"
 msgstr "Goodreads: Зв'язати книгу"
 
@@ -254,6 +290,14 @@ msgid "Session cookies…"
 msgstr "Cookies сесії…"
 
 #: goodreads_menu.lua
+msgid "Test connection"
+msgstr "Перевірити з'єднання"
+
+#: goodreads_menu.lua
+msgid "Check that the pasted cookies still work (GET /review/list). Distinguishes an expired session from an AWS WAF block."
+msgstr "Перевіряє, що вставлені cookies ще працюють (GET /review/list). Відрізняє прострочену сесію від блокування AWS WAF."
+
+#: goodreads_menu.lua
 msgid "Autolink by GOODREADS identifier"
 msgstr "Автолінк за ідентифікатором GOODREADS"
 
@@ -294,8 +338,12 @@ msgid "While auto-tracking Currently reading, post percent to Goodreads (at most
 msgstr "Поки книга в статусі «Читаю зараз» і увімкнено автовідстеження, надсилати відсоток на Goodreads (не частіше разу на хвилину). З'являється як оновлення статусу. Вимкніть, якщо не хочете автопости в стрічці; пункт меню «Оновити прогрес» при цьому працює."
 
 #: goodreads_menu.lua
-msgid "Enable Wi-Fi on demand"
-msgstr "Вмикати Wi-Fi за потреби"
+msgid "Prompt for Wi-Fi on menu actions"
+msgstr "Запитувати Wi-Fi для пунктів меню"
+
+#: goodreads_menu.lua
+msgid "Menu actions (status, progress, Test connection) follow KOReader Network → Wi-Fi enable action. Automatic sync never turns Wi-Fi on: it queues until you are online."
+msgstr "Пункти меню (статус, прогрес, Перевірити з'єднання) наслідують налаштування KOReader Мережа → дія увімкнення Wi-Fi. Автосинхронізація радіо не вмикає: пише в чергу, поки немає мережі."
 
 #: goodreads_menu.lua
 msgid "Confirm status changes"

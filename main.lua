@@ -17,7 +17,6 @@ local logger      = require("logger")
 local _           = require("lib/goodreads_i18n").gettext
 local T           = require("ffi/util").template
 
-local Device      = require("device")
 local NetworkMgr  = require("ui/network/manager")
 local UIManager   = require("ui/uimanager")
 
@@ -56,6 +55,8 @@ function GoodreadsPlugin:init()
     last_error = nil,
     network_retry_scheduled = false,
     network_retry_done = false,
+    last_offline_notice_at = 0,
+    flushing_queue = false,
   }
 
   local settings_path = ("%s/%s"):format(
@@ -99,6 +100,10 @@ or in goodreads_config.lua (DevTools → Application → Cookies → goodreads.c
 You do not need to restart KOReader — changes apply immediately.]]),
       icon = "notice-warning",
     })
+    return
+  end
+
+  if err == "no_cookies" then
     return
   end
 
@@ -195,6 +200,12 @@ end
 function GoodreadsPlugin:onGoodreadsLink()
   if not self.ui.document then
     UIManager:show(InfoMessage:new { text = _("Goodreads: open a book to link it") })
+    return
+  end
+  if not self:_hasSession() then
+    UIManager:show(InfoMessage:new {
+      text = _("Goodreads: no session cookies. Paste them in Settings → Session cookies."),
+    })
     return
   end
   self:_withWifi(function()
@@ -299,10 +310,37 @@ function GoodreadsPlugin:_quickSetStatus(status_code, opts)
     end
   end
 
-  self:_withWifi(function()
-    local edition_id = self.settings:readBookSetting(file, "edition_id")
-    local rating     = self:_resolveRating(file, status_code)
+  if not self:_hasSession() then
+    if not opts.silent then
+      UIManager:show(InfoMessage:new {
+        text = _("Goodreads: no session cookies. Paste them in Settings → Session cookies."),
+      })
+    end
+    return
+  end
 
+  local rating = self:_resolveRating(file, status_code)
+  local shelf = Api:shelfForStatus(status_code)
+
+  local function apply_local(result)
+    local update = { status = status_code, shelf = shelf }
+    if status_code == 1 then
+      update.rating = (result and result.rating) or rating or 0
+    end
+    if result and result.date_read then
+      update.date_read = result.date_read
+    end
+    self.settings:updateBookSetting(file, update)
+    if self.ui.document and self.ui.document.file == file then
+      self.state.current_status = status_code
+      self.state.current_shelf = update.shelf
+    end
+    self.state.last_auto_sync_at = os.time()
+    self.state.ensure_remote_pending = false
+  end
+
+  local function do_remote()
+    local edition_id = self.settings:readBookSetting(file, "edition_id")
     local result
     local function do_set()
       result = Api:set_status(edition_id, status_code, nil, rating)
@@ -313,20 +351,7 @@ function GoodreadsPlugin:_quickSetStatus(status_code, opts)
       do_set()
     end
     if result and result.ok then
-      local update = { status = status_code, shelf = Api:shelfForStatus(status_code) }
-      if status_code == 1 then
-        update.rating = result.rating or 0
-      end
-      if result.date_read then
-        update.date_read = result.date_read
-      end
-      self.settings:updateBookSetting(file, update)
-      if self.ui.document and self.ui.document.file == file then
-        self.state.current_status = status_code
-        self.state.current_shelf = update.shelf
-      end
-      self.state.last_auto_sync_at = os.time()
-      self.state.ensure_remote_pending = false
+      apply_local(result)
       if status_code == 2 then
         self:_sendProgress(file, { force = true })
       end
@@ -337,7 +362,18 @@ function GoodreadsPlugin:_quickSetStatus(status_code, opts)
         })
       end
     end
-  end, opts.silent)
+  end
+
+  if not self:_withWifi(do_remote, opts.silent) then
+    apply_local(nil)
+    self:_enqueueStatus(file, status_code, shelf, rating)
+    if status_code == 2 then
+      self:_enqueueProgress(file)
+    end
+    if not opts.silent then
+      self:_notifyOfflineSaved()
+    end
+  end
 end
 
 function GoodreadsPlugin:syncRatingNow(show_feedback)
@@ -372,18 +408,23 @@ Set stars and try again.]]),
   return false
 end
 
-function GoodreadsPlugin:_withWifi(callback, silent)
+function GoodreadsPlugin:_hasSession()
+  return self.settings:hasCookie()
+end
+
+--- User-initiated: follow KOReader Network → Wi-Fi enable action.
+-- Background (`silent`): never toggle the radio; return false if offline.
+function GoodreadsPlugin:_withWifi(callback, silent, force_prompt)
   if NetworkMgr:isConnected() then
     callback()
-    return
+    return true
   end
 
   local function when_connected()
     callback()
   end
 
-  -- Radio already up (typical Kobo resume) or we can restore it — wait for IP,
-  -- do not fire the request while DHCP is still running.
+  -- Radio already up (typical Kobo resume) — wait for IP, do not POST yet.
   if NetworkMgr:isWifiOn() then
     if NetworkMgr.scheduleConnectivityCheck then
       NetworkMgr:scheduleConnectivityCheck(when_connected)
@@ -392,34 +433,217 @@ function GoodreadsPlugin:_withWifi(callback, silent)
         if NetworkMgr:isConnected() then when_connected() end
       end)
     end
-    return
-  end
-
-  if self.settings:enableWifiOnDemand()
-      and Device:hasWifiRestore()
-      and G_reader_settings:nilOrFalse("airplanemode") then
-    local original_on = NetworkMgr.wifi_was_on
-    NetworkMgr:restoreWifiAsync()
-    NetworkMgr:scheduleConnectivityCheck(function()
-      NetworkMgr.wifi_was_on = original_on
-      G_reader_settings:saveSetting("wifi_was_on", original_on)
-      when_connected()
-    end)
-    return
+    return true
   end
 
   if silent then
-    return
+    return false
   end
 
-  NetworkMgr:promptWifiOn(function()
-    when_connected()
+  if not force_prompt and not self.settings:enableWifiOnDemand() then
+    return false
+  end
+
+  if NetworkMgr.willRerunWhenConnected then
+    if NetworkMgr:willRerunWhenConnected(callback) then
+      return true
+    end
+    callback()
+    return true
+  end
+  if NetworkMgr.runWhenConnected then
+    NetworkMgr:runWhenConnected(callback)
+    return true
+  end
+  NetworkMgr:promptWifiOn(when_connected)
+  return true
+end
+
+function GoodreadsPlugin:_notifyOfflineSaved()
+  local now = os.time()
+  if now - (self.state.last_offline_notice_at or 0) < 20 then
+    return
+  end
+  self.state.last_offline_notice_at = now
+  UIManager:show(Notification:new {
+    text = _("Goodreads: saved offline · will sync when connected"),
+    timeout = 3,
+  })
+end
+
+function GoodreadsPlugin:_enqueueOp(operation)
+  if not operation or not operation.operation or not operation.book_id then
+    return
+  end
+  self.settings:enqueueSync(operation)
+  logger.info("Goodreads: queued " .. tostring(operation.operation)
+    .. " book_id=" .. tostring(operation.book_id))
+end
+
+function GoodreadsPlugin:_enqueueProgress(file, percent)
+  if not file then return end
+  local book_id = self.settings:readBookSetting(file, "edition_id")
+  local pct = percent or self:_progressPct()
+  if not book_id or not pct then return end
+  self:_enqueueOp({
+    operation = "progress",
+    book_id   = tostring(book_id),
+    file      = file,
+    percent   = pct,
+  })
+end
+
+function GoodreadsPlugin:_enqueueStatus(file, status_code, shelf, rating)
+  if not file then return end
+  local book_id = self.settings:readBookSetting(file, "edition_id")
+    or self.settings:getLinkedEditionId()
+  if not book_id then return end
+  local op = (status_code == -2) and "remove" or "status"
+  self:_enqueueOp({
+    operation = op,
+    book_id   = tostring(book_id),
+    file      = file,
+    status    = status_code,
+    shelf     = shelf,
+    rating    = rating or 0,
+  })
+end
+
+function GoodreadsPlugin:_flushQueue()
+  if self.state.flushing_queue then return end
+  if not self:_hasSession() then return end
+  if not NetworkMgr:isConnected() then return end
+  local q = self.settings:getSyncQueue()
+  if #q == 0 then return end
+
+  self.state.flushing_queue = true
+  local sent = 0
+  self:_quietly(function()
+    local function run_status(op)
+      local result
+      if op.operation == "remove" then
+        result = Api:remove_status(op.book_id, op.status, op.shelf)
+      else
+        result = Api:set_status(op.book_id, op.status, nil, op.rating, op.shelf)
+      end
+      if result and result.ok then
+        self.settings:removeSync(op.operation, op.book_id)
+        sent = sent + 1
+        if op.file then
+          local update = {
+            status = op.status ~= nil and op.status or GoodreadsSettings.UNSET,
+            shelf  = op.shelf,
+          }
+          if op.operation == "remove" then
+            update.status = -2
+            update.shelf = GoodreadsSettings.UNSET
+          elseif result.date_read then
+            update.date_read = result.date_read
+          end
+          if result.rating then
+            update.rating = result.rating
+          end
+          self.settings:updateBookSetting(op.file, update)
+        end
+        return true
+      end
+      return false
+    end
+
+    for _, op in ipairs(q) do
+      if op.operation == "status" or op.operation == "remove" then
+        run_status(op)
+      end
+    end
+    q = self.settings:getSyncQueue()
+    for _, op in ipairs(q) do
+      if op.operation == "progress" then
+        local result = Api:set_progress(op.book_id, op.percent)
+        if result and result.ok then
+          self.settings:removeSync("progress", op.book_id)
+          sent = sent + 1
+          if op.file then
+            self.settings:updateBookSetting(op.file, {
+              last_progress = result.percent or op.percent,
+            })
+          end
+        end
+      elseif op.operation == "rating" then
+        local result = Api:set_rating(op.book_id, op.rating)
+        if result and result.ok then
+          self.settings:removeSync("rating", op.book_id)
+          sent = sent + 1
+          if op.file then
+            self.settings:updateBookSetting(op.file, { rating = result.rating or op.rating })
+          end
+        end
+      end
+    end
   end)
+  self.state.flushing_queue = false
+  if sent > 0 then
+    logger.info("Goodreads: flushed " .. tostring(sent) .. " queued ops")
+    UIManager:show(Notification:new {
+      text = T(_("Goodreads: synced %1 queued update(s)"), tostring(sent)),
+      timeout = 3,
+    })
+  end
+end
+
+function GoodreadsPlugin:testConnection()
+  if not self:_hasSession() then
+    UIManager:show(InfoMessage:new {
+      text = _("Goodreads: no session cookies. Paste them in Settings → Session cookies."),
+      icon = "notice-warning",
+    })
+    return
+  end
+  self:_withWifi(function()
+    local loading = InfoMessage:new { text = _("Testing Goodreads connection…") }
+    UIManager:show(loading)
+    UIManager:scheduleIn(0.1, function()
+      local result = Api:test_session()
+      UIManager:close(loading)
+      if result and result.ok then
+        local uid = result.user_id
+        local text = uid
+          and T(_("Goodreads: connection OK (user %1)"), tostring(uid))
+          or _("Goodreads: connection OK")
+        local n = self.settings:queueSize()
+        if n > 0 then
+          text = text .. "\n" .. T(_("Waiting to sync: %1"), tostring(n))
+        end
+        UIManager:show(InfoMessage:new { text = text })
+        self:_flushQueue()
+        return
+      end
+      local err = result and result.error
+      if err == "no_network" then
+        UIManager:show(InfoMessage:new {
+          text = _("Goodreads: no network connection"),
+          icon = "notice-warning",
+        })
+      elseif err == "session_expired" or err == "no_cookies" then
+        self:_handleApiError("session_expired")
+      elseif err == "waf_challenge" then
+        self:_handleApiError("waf_challenge")
+      else
+        UIManager:show(InfoMessage:new {
+          text = T(_("Goodreads: %1"), tostring(err or _("Connection failed"))),
+          icon = "notice-warning",
+        })
+      end
+    end)
+  end, false, true)
 end
 
 function GoodreadsPlugin:_canAutoSync(filename, opts)
   opts = opts or {}
   if not filename then return false end
+  if not self:_hasSession() then
+    logger.dbg("Goodreads: auto-track skip — no session cookie")
+    return false
+  end
   if not self.settings:readBookSetting(filename, "edition_id") then
     logger.dbg("Goodreads: auto-track skip — book not linked")
     return false
@@ -526,20 +750,32 @@ function GoodreadsPlugin:syncProgressNow(show_feedback)
   local is_reading = current == 2 or shelf == "currently-reading"
   local is_custom = type(shelf) == "string" and shelf ~= "" and not CORE_SHELVES[shelf]
   if not is_reading and not is_custom then
-    local edition_id = self.settings:getLinkedEditionId()
-    local status_result = Api:set_status(edition_id, 2, nil, 0)
-    if not status_result or not status_result.ok then
-      return false
-    end
     local reading_shelf = Api:shelfForStatus(2) or "currently-reading"
-    self.settings:updateBookSetting(file, { status = 2, shelf = reading_shelf })
-    self.state.current_status = 2
-    self.state.current_shelf = reading_shelf
-    self.state.ensure_remote_pending = false
+    if not NetworkMgr:isConnected() then
+      self.settings:updateBookSetting(file, { status = 2, shelf = reading_shelf })
+      self.state.current_status = 2
+      self.state.current_shelf = reading_shelf
+      self.state.ensure_remote_pending = false
+      self:_enqueueStatus(file, 2, reading_shelf, 0)
+    else
+      local edition_id = self.settings:getLinkedEditionId()
+      local status_result = Api:set_status(edition_id, 2, nil, 0)
+      if not status_result or not status_result.ok then
+        return false
+      end
+      self.settings:updateBookSetting(file, { status = 2, shelf = reading_shelf })
+      self.state.current_status = 2
+      self.state.current_shelf = reading_shelf
+      self.state.ensure_remote_pending = false
+    end
   end
 
   local result = self:_sendProgress(file, { manual = true, force = true })
   if result and result.ok then
+    if result.queued then
+      self:_notifyOfflineSaved()
+      return true
+    end
     if show_feedback then
       UIManager:show(Notification:new {
         text = T(_("Goodreads: progress %1% sent"), tostring(result.percent or pct)),
@@ -574,6 +810,11 @@ function GoodreadsPlugin:_sendProgress(file, opts)
     if now - (self.state.last_auto_sync_at or 0) < MIN_AUTO_SYNC_INTERVAL then
       return nil
     end
+  end
+
+  if not NetworkMgr:isConnected() then
+    self:_enqueueProgress(file, pct)
+    return { ok = true, queued = true, percent = pct }
   end
 
   local result = Api:set_progress(edition_id, pct)
@@ -620,9 +861,11 @@ function GoodreadsPlugin:_maybeAutoTrackProgress(opts)
       logger.info("Goodreads: auto-track Currently reading (" .. string.format("%.1f", pct) .. "%)")
       self:_quickSetStatus(2, silent_opts)
     else
-      self:_withWifi(function()
+      if not self:_withWifi(function()
         self:_sendProgress(file)
-      end, true)
+      end, true) then
+        self:_enqueueProgress(file)
+      end
     end
   end
 end
@@ -717,6 +960,7 @@ end
 function GoodreadsPlugin:_runPendingEnsure()
   if not self.state.ensure_remote_pending then return end
   if not self.ui.document then return end
+  if not self:_hasSession() then return end
   if not self.settings:syncEnabled() then
     self.state.ensure_remote_pending = false
     return
@@ -735,6 +979,10 @@ end
 function GoodreadsPlugin:_tryAutolinkByGoodreadsId()
   if not self.state.autolink_pending then return end
   if not self.ui.document then return end
+  if not self:_hasSession() then
+    logger.dbg("Goodreads: autolink skip — no session cookie")
+    return
+  end
   if self.settings:bookLinked() then
     self.state.autolink_pending = false
     return
@@ -771,6 +1019,7 @@ end
 
 function GoodreadsPlugin:_refreshRemoteState()
   if not self.ui.document then return end
+  if not self:_hasSession() then return end
   if not self.settings:bookLinked() then return end
   if not NetworkMgr:isConnected() then
     self:_scheduleNetworkRetry()
@@ -823,6 +1072,11 @@ function GoodreadsPlugin:onReaderReady()
       .. " for " .. self.ui.document.file)
   end
 
+  if not self:_hasSession() then
+    logger.info("Goodreads: no session cookie — skip network on open")
+    return
+  end
+
   if self.state.autolink_pending then
     UIManager:scheduleIn(2, function()
       self:_tryAutolinkByGoodreadsId()
@@ -840,7 +1094,9 @@ end
 
 function GoodreadsPlugin:onNetworkConnected()
   self.state.network_retry_done = false
+  if not self:_hasSession() then return end
   self:_quietly(function()
+    self:_flushQueue()
     self:_tryAutolinkByGoodreadsId()
     if self.state.ensure_remote_pending then
       self:_runPendingEnsure()
@@ -851,6 +1107,22 @@ function GoodreadsPlugin:onNetworkConnected()
 end
 
 function GoodreadsPlugin:onDocumentClose()
+  local file = self.ui.document and self.ui.document.file
+  if file and self:_hasSession()
+      and self.settings:readBookSetting(file, "edition_id")
+      and self.settings:fileSyncEnabled(file) then
+    local pct = self:_progressPct()
+    if pct and pct >= 1 and pct < 99.5
+        and not self:_progressBlockedByStatus(file) then
+      if not NetworkMgr:isConnected() then
+        self:_enqueueProgress(file, pct)
+      else
+        self:_quietly(function()
+          self:_sendProgress(file, { force = true })
+        end)
+      end
+    end
+  end
   self.state.current_status = nil
   self.state.current_shelf = nil
   self.state.page = nil
@@ -858,6 +1130,14 @@ function GoodreadsPlugin:onDocumentClose()
   self.state.ensure_remote_pending = false
   self.state.network_retry_scheduled = false
   self.state.network_retry_done = false
+end
+
+function GoodreadsPlugin:onCookiesSaved()
+  if not self:_hasSession() then return end
+  if NetworkMgr:isConnected() then
+    self:_flushQueue()
+    self:_tryAutolinkByGoodreadsId()
+  end
 end
 
 function GoodreadsPlugin:addToMainMenu(menu_items)

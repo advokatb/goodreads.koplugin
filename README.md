@@ -14,6 +14,8 @@ A [KOReader](https://github.com/koreader/koreader) plugin that syncs reading sta
 - Sync rating from KOReader Book Status (1–5★, same scale as Goodreads)
 - Auto-tracking: **Currently reading** while reading (optional percent via `POST /user_status.json`), **Finished** at ~100% / book completion (+ rating and today's date read)
 - Manual **Update progress: N%** in the Goodreads menu (and a gesture) — posts percent now, even if auto-tracking is off
+- **Test connection** to verify cookies (and tell WAF from an expired session)
+- Offline queue: auto-sync never turns Wi-Fi on; writes wait until you are online
 - Session cookies with live `Set-Cookie` rotation (`aws-waf-token` and friends)
 
 > Goodreads exclusive shelves are at least **Want to read / Currently reading / Read**. Extra exclusive shelves from the account (for example **Did not finish** or **Paused**) appear in the menu. Custom tag shelves are not listed.
@@ -50,6 +52,10 @@ A [KOReader](https://github.com/koreader/koreader) plugin that syncs reading sta
 ### Alternative: enter cookies from the menu
 
 **Menu → Goodreads → Settings → Session cookies**
+
+**Test connection** (same Settings menu) does `GET /review/list` and reports OK, expired session, or AWS WAF. Use it after pasting cookies.
+
+Without cookies the plugin stays quiet: no autolink, no background Goodreads calls.
 
 ## Usage
 
@@ -95,7 +101,7 @@ Scale: 1–5★ in KOReader = 1–5 on Goodreads (no conversion).
 4. At ~100%, EndOfBook, or Book Status = complete → **Finished** (+ rating + today's date read)
 5. Book Status = abandoned → **Did not finish** if that exclusive shelf exists on the account
 
-Requests are throttled (max once per minute). Turn off **Settings → Sync reading progress** if you do not want automatic percent updates in the Goodreads feed; **Update progress** in the menu still works. Custom exclusive shelves (not the three system ones) are left alone. **Enable Wi-Fi on demand** helps on devices that can restore Wi-Fi automatically.
+Requests are throttled (max once per minute). Turn off **Settings → Sync reading progress** if you do not want automatic percent updates in the Goodreads feed; **Update progress** in the menu still works. Custom exclusive shelves (not the three system ones) are left alone. Automatic sync never turns Wi-Fi on: if you are offline, progress and status are queued and sent when you reconnect. **Prompt for Wi-Fi on menu actions** (on by default) uses KOReader’s Network → Wi-Fi enable action for explicit taps only.
 
 ### Autolink
 
@@ -118,7 +124,7 @@ In **Menu → Settings → Gestures**, you can assign:
 
 | Data | Location |
 |------|----------|
-| Session cookies, plugin settings | `<koreader_dir>/settings/goodreads_settings.lua` |
+| Session cookies, plugin settings, offline queue | `<koreader_dir>/settings/goodreads_settings.lua` |
 | Book link (book id, status, rating, sync) | Sidecar (`*.sdr/metadata.*.lua`, key `goodreads`) |
 | KOReader rating / status | Sidecar `summary.rating` / `summary.status` |
 | Secret cookies (manual config) | `goodreads_config.lua` (gitignored) |
@@ -129,13 +135,17 @@ Goodreads cookies expire (especially `_session_id2`). The plugin applies `Set-Co
 
 You do not need to restart KOReader after pasting new cookies.
 
+## Offline queue
+
+Automatic percent/status writes while Wi-Fi is off are stored in plugin settings (`sync_queue`) and flushed on **Network connected**, **Test connection**, or after you save new cookies while online. Closing a book offline keeps the last percent.
+
 ## Technical details
 
 - **Auth:** browser Cookie header (Rails `_session_id2` + Amazon SSO; not a single cookie; no official API)
 - **HTTP:** `socket.http` + `ltn12`; GET without `Origin`; `Sec-Fetch-*` on navigations
 - **JSON:** built-in `json` module
-- **CSRF:** `<meta name="csrf-token">` from `GET /` (homepage is still Rails)
-- **Progress:** `POST /user_status.json` with `user_status[percent]` (never page+percent together)
+- **CSRF:** `<meta name="csrf-token">` from `GET /review/list` (homepage `GET /` is a fallback; `/book/show` is Next.js)
+- **Progress:** `POST /user_status.json` with `user_status[percent]` and `authenticity_token` (never page+percent together)
 - **Anti-bot:** AWS WAF; keep `aws-waf-token` if the browser sent it; never replay `jwt_token`
 
 ## License
