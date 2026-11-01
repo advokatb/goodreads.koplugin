@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.5.0] - 2026-10-02
+
+### Added
+- **Waiting to sync** in Settings: list queued progress/status updates, **Sync now**, **Retry failed**, **Clear failed**. Failed items stay after a few attempts instead of vanishing.
+- Progress POST that still returns **404** after a CSRF refresh adds the book to
+  **Currently reading** and retries once (unshelved book).
+- Warning when auto-track opens a book whose exclusive shelf on the site is not
+  Currently reading, with a one-tap fix.
+
+### Changed
+- Queue flush sends a few POSTs per pass so a long burst cannot freeze the reader;
+  the rest drain on a timer. Sync and flush do not run at the same time.
+- Background work after a Wi-Fi wait ignores the document if that book was closed
+  or replaced.
+
+### Fixed
+- **Status removed** is no longer radio-selected when a linked book simply has no
+  exclusive shelf yet (empty ≠ destroy).
+- Finished / status toasts no longer fire twice after Book Status + returning to
+  the file manager (Reader and FileManager both received the same event).
+
 ## [0.4.0] - 2026-09-18
 
 ### Added

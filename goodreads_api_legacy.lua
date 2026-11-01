@@ -372,7 +372,7 @@ function GoodreadsApiLegacy:_ensure_csrf_token(force)
   }
 
   local token
-  for _, url in ipairs(self:_csrf_urls()) do
+  for _i, url in ipairs(self:_csrf_urls()) do
     local code, body, resp_headers = self:_request(
       "GET", url, nil, html_headers, { follow_redirects = true }
     )
@@ -419,7 +419,7 @@ function GoodreadsApiLegacy:test_session()
     ["X-Requested-With"] = nil,
   }
   local last_err
-  for _, url in ipairs(self:_csrf_urls()) do
+  for _i, url in ipairs(self:_csrf_urls()) do
     local code, body, resp_headers = self:_request(
       "GET", url, nil, html_headers, { follow_redirects = true }
     )
@@ -920,7 +920,7 @@ function GoodreadsApiLegacy:set_progress(book_id, percent)
   if pct < 1 then pct = 1 end
   if pct > 100 then pct = 100 end
 
-  return self:_with_csrf(function(token)
+  local function attempt(token)
     local extra = {
       ["Accept"]           = "application/json",
       ["X-Requested-With"] = "XMLHttpRequest",
@@ -948,8 +948,10 @@ function GoodreadsApiLegacy:set_progress(book_id, percent)
       report_error(self, auth_err)
       return { ok = false, error_text = auth_err }
     end
+    -- First 404 is usually a stale CSRF token; a 404 after refresh means
+    -- the book is not on any exclusive shelf (Goodreads rejects the ping).
     if self:_is_csrf_invalid(code, response) then
-      return { _retry_csrf = true }
+      return { _retry_csrf = true, http_code = code }
     end
     if not is_success_code(code) then
       logger.warn("Goodreads: progress post HTTP " .. tostring(code))
@@ -966,7 +968,26 @@ function GoodreadsApiLegacy:set_progress(book_id, percent)
     local sent = parsed and parsed.current or pct
     logger.info("Goodreads: progress book_id=" .. book_id .. " percent=" .. tostring(sent))
     return { ok = true, percent = sent, position_type = parsed and parsed.position_type or "percent" }
-  end)
+  end
+
+  local token = self:_ensure_csrf_token(false)
+  if not token then return { ok = false, error_text = PARSE_ERROR } end
+  local result = attempt(token)
+  if result and result._retry_csrf then
+    self:reset_csrf_token()
+    token = self:_ensure_csrf_token(true)
+    if not token then return { ok = false, error_text = PARSE_ERROR } end
+    result = attempt(token)
+  end
+  if result and result._retry_csrf then
+    if result.http_code == 404 then
+      logger.warn("Goodreads: progress 404 after CSRF refresh — book not on a shelf")
+      return { ok = false, error = "not_on_shelf" }
+    end
+    report_error(self, PARSE_ERROR)
+    return { ok = false, error_text = PARSE_ERROR }
+  end
+  return result
 end
 
 function GoodreadsApiLegacy:remove_status(book_id, _current_status, _current_shelf)

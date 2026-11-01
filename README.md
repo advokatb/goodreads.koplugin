@@ -15,7 +15,9 @@ A [KOReader](https://github.com/koreader/koreader) plugin that syncs reading sta
 - Auto-tracking: **Currently reading** while reading (optional percent via `POST /user_status.json`), **Finished** at ~100% / book completion (+ rating and today's date read)
 - Manual **Update progress: N%** in the Goodreads menu (and a gesture) — posts percent now, even if auto-tracking is off
 - **Test connection** to verify cookies (and tell WAF from an expired session)
+- **Waiting to sync**: queued updates, retry/clear failed, flush in small batches
 - Offline queue: auto-sync never turns Wi-Fi on; writes wait until you are online
+- If the book on Goodreads is not Currently reading, auto-track warns instead of overwriting Paused/DNF/Finished
 - Session cookies with live `Set-Cookie` rotation (`aws-waf-token` and friends)
 
 > Goodreads exclusive shelves are at least **Want to read / Currently reading / Read**. Extra exclusive shelves from the account (for example **Did not finish** or **Paused**) appear in the menu. Custom tag shelves are not listed.

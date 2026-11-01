@@ -414,3 +414,75 @@ msgstr ""
 #: goodreads_menu.lua
 msgid "Goodreads ✓"
 msgstr ""
+
+#: goodreads_menu.lua
+msgid "Waiting to sync (%1, %2 failed)"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Waiting to sync (%1)"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Waiting to sync"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Queued progress and status updates that will POST when you are online. Failed items stay until you retry or clear them."
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Progress %1%"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Rating %1★"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Status"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Failed: %1"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Goodreads: nothing waiting to sync"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "%1 pending, %2 failed"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Sync now"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Close"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Retry failed"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Clear failed"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Goodreads: no failed updates to retry"
+msgstr ""
+
+#: goodreads_menu.lua
+msgid "Goodreads: failed updates cleared"
+msgstr ""
+
+#: main.lua
+msgid "Goodreads: this book is “%1” on the site, so progress will not sync.\n\nMark it Currently reading?"
+msgstr ""
+
+#: main.lua
+msgid "Keep as is"
+msgstr ""

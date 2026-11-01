@@ -411,11 +411,11 @@ function GoodreadsMenu:getStatusSubMenuItems()
       text = label,
       radio = true,
       checked_func = function()
-        if current_status == -2 then
-          return code == -2
-        end
         if code == -2 then
-          return not current_shelf
+          return current_status == -2
+        end
+        if current_status == -2 then
+          return false
         end
         if item.shelf and current_shelf then
           return current_shelf == item.shelf
@@ -437,6 +437,88 @@ function GoodreadsMenu:getStatusSubMenuItems()
   return items
 end
 
+function GoodreadsMenu:_queueOpLabel(op)
+  local name = op.title or op.book_id or "?"
+  local kind
+  if op.operation == "progress" then
+    kind = T(_("Progress %1%"), tostring(op.percent or "?"))
+  elseif op.operation == "remove" then
+    kind = _("Status removed")
+  elseif op.operation == "rating" then
+    kind = T(_("Rating %1★"), tostring(op.rating or "?"))
+  else
+    kind = Api:shelfLabel(op.shelf) or Api:statusText(op.status) or _("Status")
+  end
+  local line = kind .. " · " .. tostring(name)
+  if op.failed then
+    line = T(_("Failed: %1"), line)
+  end
+  return line
+end
+
+function GoodreadsMenu:showQueueDialog()
+  local q = self.settings:getSyncQueue()
+  if #q == 0 then
+    UIManager:show(InfoMessage:new {
+      text = _("Goodreads: nothing waiting to sync"),
+    })
+    return
+  end
+  local lines = {}
+  local pending, failed = self.settings:queueCounts()
+  for _, op in ipairs(q) do
+    table.insert(lines, "• " .. self:_queueOpLabel(op))
+  end
+  local text = table.concat(lines, "\n")
+  if failed > 0 then
+    text = text .. "\n\n" .. T(_("%1 pending, %2 failed"), tostring(pending), tostring(failed))
+  end
+
+  UIManager:show(ConfirmBox:new {
+    text = text,
+    ok_text = _("Sync now"),
+    cancel_text = _("Close"),
+    ok_callback = function()
+      if self.plugin then
+        self.plugin:_withWifi(function()
+          self.plugin:_flushQueue()
+        end, false, true)
+      end
+    end,
+    other_buttons = {
+      {
+        {
+          text = _("Retry failed"),
+          callback = function()
+            if self.plugin then
+              local n = self.settings:retryFailedSync()
+              if n == 0 then
+                UIManager:show(InfoMessage:new {
+                  text = _("Goodreads: no failed updates to retry"),
+                })
+                return
+              end
+              self.plugin:_withWifi(function()
+                self.plugin:_flushQueue()
+              end, false, true)
+            end
+          end,
+        },
+        {
+          text = _("Clear failed"),
+          callback = function()
+            self.settings:clearFailedSync()
+            UIManager:show(Notification:new {
+              text = _("Goodreads: failed updates cleared"),
+              timeout = 2,
+            })
+          end,
+        },
+      },
+    },
+  })
+end
+
 function GoodreadsMenu:getSettingsSubMenuItems()
   return {
     {
@@ -455,6 +537,27 @@ function GoodreadsMenu:getSettingsSubMenuItems()
         end
       end,
       help_text = _("Check that the pasted cookies still work (GET /review/list). Distinguishes an expired session from an AWS WAF block."),
+    },
+    {
+      text_func = function()
+        local n = self.settings:queueSize()
+        if n > 0 then
+          local pending, failed = self.settings:queueCounts()
+          if failed > 0 then
+            return T(_("Waiting to sync (%1, %2 failed)"), tostring(pending), tostring(failed))
+          end
+          return T(_("Waiting to sync (%1)"), tostring(n))
+        end
+        return _("Waiting to sync")
+      end,
+      enabled_func = function()
+        return self.settings:queueSize() > 0
+      end,
+      keep_menu_open = true,
+      callback = function()
+        self:showQueueDialog()
+      end,
+      help_text = _("Queued progress and status updates that will POST when you are online. Failed items stay until you retry or clear them."),
     },
     {
       text = _("Autolink by GOODREADS identifier"),

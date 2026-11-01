@@ -436,3 +436,75 @@ msgstr "Про програму"
 #: goodreads_menu.lua
 msgid "Goodreads ✓"
 msgstr "Goodreads ✓"
+
+#: goodreads_menu.lua
+msgid "Waiting to sync (%1, %2 failed)"
+msgstr "Очікують надсилання (%1, з помилкою: %2)"
+
+#: goodreads_menu.lua
+msgid "Waiting to sync (%1)"
+msgstr "Очікують надсилання (%1)"
+
+#: goodreads_menu.lua
+msgid "Waiting to sync"
+msgstr "Очікують надсилання"
+
+#: goodreads_menu.lua
+msgid "Queued progress and status updates that will POST when you are online. Failed items stay until you retry or clear them."
+msgstr "Прогрес і статуси в черзі надішлються, коли буде мережа. Невдалі лишаються, доки не натиснете «Повторити» або «Видалити»."
+
+#: goodreads_menu.lua
+msgid "Progress %1%"
+msgstr "Прогрес %1%"
+
+#: goodreads_menu.lua
+msgid "Rating %1★"
+msgstr "Оцінка %1★"
+
+#: goodreads_menu.lua
+msgid "Status"
+msgstr "Статус"
+
+#: goodreads_menu.lua
+msgid "Failed: %1"
+msgstr "Помилка: %1"
+
+#: goodreads_menu.lua
+msgid "Goodreads: nothing waiting to sync"
+msgstr "Goodreads: черга порожня"
+
+#: goodreads_menu.lua
+msgid "%1 pending, %2 failed"
+msgstr "У черзі: %1, з помилкою: %2"
+
+#: goodreads_menu.lua
+msgid "Sync now"
+msgstr "Надіслати зараз"
+
+#: goodreads_menu.lua
+msgid "Close"
+msgstr "Закрити"
+
+#: goodreads_menu.lua
+msgid "Retry failed"
+msgstr "Повторити помилки"
+
+#: goodreads_menu.lua
+msgid "Clear failed"
+msgstr "Видалити помилки"
+
+#: goodreads_menu.lua
+msgid "Goodreads: no failed updates to retry"
+msgstr "Goodreads: немає невдалих надсилань"
+
+#: goodreads_menu.lua
+msgid "Goodreads: failed updates cleared"
+msgstr "Goodreads: невдалі надсилання видалено"
+
+#: main.lua
+msgid "Goodreads: this book is “%1” on the site, so progress will not sync.\n\nMark it Currently reading?"
+msgstr "Goodreads: на сайті в книги статус «%1», прогрес не синхронізується.\n\nПоставити «Читаю зараз»?"
+
+#: main.lua
+msgid "Keep as is"
+msgstr "Залишити як є"

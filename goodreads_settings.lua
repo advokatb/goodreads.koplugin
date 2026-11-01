@@ -242,6 +242,9 @@ function GoodreadsSettings:enqueueSync(operation)
     local item_key = tostring(item.operation) .. ":" .. tostring(item.book_id or "")
     if item_key == key then
       operation.queued_at = item.queued_at or os.time()
+      operation.attempts = 0
+      operation.failed = nil
+      operation.fail_reason = nil
       q[i] = operation
       replaced = true
       break
@@ -249,6 +252,7 @@ function GoodreadsSettings:enqueueSync(operation)
   end
   if not replaced then
     operation.queued_at = os.time()
+    operation.attempts = 0
     table.insert(q, operation)
   end
   self:updateSetting(GoodreadsSettings.KEY_SYNC_QUEUE, q)
@@ -269,6 +273,78 @@ end
 
 function GoodreadsSettings:clearSyncQueue()
   self:updateSetting(GoodreadsSettings.KEY_SYNC_QUEUE, {})
+end
+
+function GoodreadsSettings:queueCounts()
+  local pending, failed = 0, 0
+  for _, item in ipairs(self:getSyncQueue()) do
+    if item.failed then
+      failed = failed + 1
+    else
+      pending = pending + 1
+    end
+  end
+  return pending, failed
+end
+
+function GoodreadsSettings:markSyncFailed(operation, book_id, reason)
+  local key = tostring(operation) .. ":" .. tostring(book_id or "")
+  local q = self:getSyncQueue()
+  for i, item in ipairs(q) do
+    local item_key = tostring(item.operation) .. ":" .. tostring(item.book_id or "")
+    if item_key == key then
+      item.attempts = (tonumber(item.attempts) or 0) + 1
+      item.failed = true
+      item.fail_reason = reason
+      q[i] = item
+      break
+    end
+  end
+  self:updateSetting(GoodreadsSettings.KEY_SYNC_QUEUE, q)
+end
+
+function GoodreadsSettings:bumpSyncAttempt(operation, book_id)
+  local key = tostring(operation) .. ":" .. tostring(book_id or "")
+  local q = self:getSyncQueue()
+  for i, item in ipairs(q) do
+    local item_key = tostring(item.operation) .. ":" .. tostring(item.book_id or "")
+    if item_key == key then
+      item.attempts = (tonumber(item.attempts) or 0) + 1
+      q[i] = item
+      break
+    end
+  end
+  self:updateSetting(GoodreadsSettings.KEY_SYNC_QUEUE, q)
+end
+
+--- Clear the failed flag so the next flush tries those items again.
+function GoodreadsSettings:retryFailedSync()
+  local q = self:getSyncQueue()
+  local n = 0
+  for i, item in ipairs(q) do
+    if item.failed then
+      item.failed = nil
+      item.fail_reason = nil
+      item.attempts = 0
+      q[i] = item
+      n = n + 1
+    end
+  end
+  if n > 0 then
+    self:updateSetting(GoodreadsSettings.KEY_SYNC_QUEUE, q)
+  end
+  return n
+end
+
+function GoodreadsSettings:clearFailedSync()
+  local q = self:getSyncQueue()
+  local next_q = {}
+  for _, item in ipairs(q) do
+    if not item.failed then
+      table.insert(next_q, item)
+    end
+  end
+  self:updateSetting(GoodreadsSettings.KEY_SYNC_QUEUE, next_q)
 end
 
 -- ─── Per-document (sidecar) settings ─────────────────────────────────────────
